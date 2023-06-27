@@ -2,7 +2,8 @@
     "name": "DungeonCrawler",
     "description": "",
     "dependencies": {
-        "device": "*"
+        "device": "*",
+        "arcade-text": "github:microsoft/arcade-text#v1.3.0"
     },
     "files": [
         "main.blocks",
@@ -25,5 +26,5 @@
     "supportedTargets": [
         "arcade"
     ],
-    "preferredEditor": "blocksprj"
+    "preferredEditor": "pyprj"
 }
