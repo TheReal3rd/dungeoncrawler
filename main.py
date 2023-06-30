@@ -63,8 +63,28 @@ class ItemBurger(ItemBase):
         return info.life() != 5
 #END Items definitions
 #START Utils
+class msDelay():#This breaks blocks. and its annoying.
+    time = 0
 
+    def __init__(self):
+        time = game.runtime()
 
+    def reset(self):
+        self.time = game.runtime()
+
+    def passedMS(self, amount):
+        if(game.runtime() - self.time >= amount):
+            self.reset()
+            return True
+        else:
+            return False
+
+def clamp(minNum, maxNum, value):
+    if(value < minNum):
+        return minNum
+    if(value > maxNum):
+        return maxNum
+    return value
 
 def calcDistance(posX1: number, posY1: number, posX2: number, posY2: number):
     xDiff = posX1 - posX2
@@ -87,27 +107,41 @@ def updatePlayer():
         playerOne.x += playerSpeed
     if controller.left.is_pressed():
         playerOne.x += playerSpeed * -1
-    if controller.A.is_pressed():#Attack
+    if controller.A.is_pressed():#Use Actions
         pass
     if controller.B.is_pressed():#Actions
-        actionSelectIndex += 1
-        if(actionSelectIndex >= 4):
-            actionSelectIndex = 0
-        playerAction.set_text(actionsStrings[actionSelectIndex])
+        if(actionSwapDelay.passedMS(500)):
+            actionSelectIndex += 1
+            if(actionSelectIndex >= 3):
+                actionSelectIndex = 0
+            playerAction.destroy()
+            playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
 
-    playerAction.x = (playerOne.x - 80) + (playerAction.width / 2)
-    playerAction.y = playerOne.y + 56
+
+    playerAction.x = clamp(
+        Math.max(playerOne.x - ((scene.screen_width() - playerAction.width) / 2), (playerAction.width / 2)), 
+        3118,
+        playerOne.x - ((scene.screen_width() - playerAction.width) / 2)
+    )
+    #Good
+    playerAction.y = clamp(116, 3196, (playerOne.y + ((scene.screen_height() - playerAction.height) / 2)))
         
+    print("X: "+ playerOne.x +" Y:"+playerOne.y+ " width: "+playerAction.width+ " X2:"+ playerAction.x)
+
 def updateEntities(range2: number):
+    pass
+
+def collisionCheck():
     pass
     
 #Consts
 maxNumItems = 4
 actionsStrings = [
-    "Open Inventory",
+    "Inventory",
     "Attack",
     "Health Potion",
 ]
+#Their is a minimap extension that i could use? maybe get the core game in then start adding features. This is to test the consoles limits.
 
 scene.set_background_color(2)
 actionSelectIndex = 0
@@ -128,10 +162,13 @@ playerSpeed = 1
 scene.camera_follow_sprite(playerOne)
 info.set_life(5)
 game.stats = True
+actionSwapDelay = msDelay()
 
-
-
+playerOne.x = 3000
+#playerOne.y = 3000
 
 def on_forever():
     updatePlayer()
+    updateEntities(16)#TODO why did i put a range value here?
+    collisionCheck()
 forever(on_forever)

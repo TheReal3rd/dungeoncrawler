@@ -122,6 +122,57 @@ class ItemBurger extends ItemBase {
 
 // END Items definitions
 // START Utils
+class msDelay {
+    static time: number
+    private ___time_is_set: boolean
+    private ___time: number
+    get time(): number {
+        return this.___time_is_set ? this.___time : msDelay.time
+    }
+    set time(value: number) {
+        this.___time_is_set = true
+        this.___time = value
+    }
+    
+    public static __initmsDelay() {
+        // This breaks blocks. and its annoying.
+        msDelay.time = 0
+    }
+    
+    constructor() {
+        let time = game.runtime()
+    }
+    
+    public reset() {
+        this.time = game.runtime()
+    }
+    
+    public passedMS(amount: number): boolean {
+        if (game.runtime() - this.time >= amount) {
+            this.reset()
+            return true
+        } else {
+            return false
+        }
+        
+    }
+    
+}
+
+msDelay.__initmsDelay()
+
+function clamp(minNum: number, maxNum: number, value: number): number {
+    if (value < minNum) {
+        return minNum
+    }
+    
+    if (value > maxNum) {
+        return maxNum
+    }
+    
+    return value
+}
+
 function calcDistance(posX1: number, posY1: number, posX2: number, posY2: number): number {
     let xDiff = posX1 - posX2
     let yDiff = posY1 - posY2
@@ -152,31 +203,42 @@ function updatePlayer() {
     }
     
     if (controller.A.isPressed()) {
-        // Attack
+        // Use Actions
         
     }
     
     if (controller.B.isPressed()) {
         // Actions
-        actionSelectIndex += 1
-        if (actionSelectIndex >= 4) {
-            actionSelectIndex = 0
+        if (actionSwapDelay.passedMS(500)) {
+            actionSelectIndex += 1
+            if (actionSelectIndex >= 3) {
+                actionSelectIndex = 0
+            }
+            
+            playerAction.destroy()
+            playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
         }
         
-        playerAction.setText(actionsStrings[actionSelectIndex])
     }
     
-    playerAction.x = playerOne.x - 80 + playerAction.width / 2
-    playerAction.y = playerOne.y + 56
+    playerAction.x = clamp(Math.max(playerOne.x - (scene.screenWidth() - playerAction.width) / 2, playerAction.width / 2), 3118, playerOne.x - (scene.screenWidth() - playerAction.width) / 2)
+    // Good
+    playerAction.y = clamp(116, 3196, playerOne.y + (scene.screenHeight() - playerAction.height) / 2)
+    console.log("X: " + playerOne.x + " Y:" + playerOne.y + " width: " + playerAction.width + " X2:" + playerAction.x)
 }
 
 function updateEntities(range2: number) {
     
 }
 
+function collisionCheck() {
+    
+}
+
 // Consts
 let maxNumItems = 4
-let actionsStrings = ["Open Inventory", "Attack", "Health Potion"]
+let actionsStrings = ["Inventory", "Attack", "Health Potion"]
+// Their is a minimap extension that i could use? maybe get the core game in then start adding features. This is to test the consoles limits.
 scene.setBackgroundColor(2)
 let actionSelectIndex = 0
 let playerLevel = 1
@@ -184,7 +246,7 @@ let playerSpeed = 0
 let playerOne : Sprite = null
 let playerAction : TextSprite = null
 playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
-let playerInventory : any[] = []
+let playerInventory : number[][] = []
 let levelID = 0
 tiles.setCurrentTilemap(tilemap`
     level1
@@ -196,6 +258,12 @@ playerSpeed = 1
 scene.cameraFollowSprite(playerOne)
 info.setLife(5)
 game.stats = true
+let actionSwapDelay = new msDelay()
+playerOne.x = 3000
+// playerOne.y = 3000
 forever(function on_forever() {
     updatePlayer()
+    updateEntities(16)
+    // TODO why did i put a range value here?
+    collisionCheck()
 })
