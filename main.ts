@@ -1,16 +1,5 @@
 // START Items definitions
 class ItemBase {
-    static texture: Image
-    private ___texture_is_set: boolean
-    private ___texture: Image
-    get texture(): Image {
-        return this.___texture_is_set ? this.___texture : ItemBase.texture
-    }
-    set texture(value: Image) {
-        this.___texture_is_set = true
-        this.___texture = value
-    }
-    
     static itemName: string
     private ___itemName_is_set: boolean
     private ___itemName: string
@@ -22,14 +11,25 @@ class ItemBase {
         this.___itemName = value
     }
     
-    itemname: string
+    static texture: Image
+    private ___texture_is_set: boolean
+    private ___texture: Image
+    get texture(): Image {
+        return this.___texture_is_set ? this.___texture : ItemBase.texture
+    }
+    set texture(value: Image) {
+        this.___texture_is_set = true
+        this.___texture = value
+    }
+    
     public static __initItemBase() {
+        //  This is a template to all Items.
         ItemBase.itemName = "Empty"
         ItemBase.texture = assets.image`EmptyItem`
     }
     
-    constructor(itemName: string, texture: Image) {
-        this.itemname = itemName
+    constructor(name: string, texture: Image) {
+        this.itemName = name
         this.texture = texture
     }
     
@@ -37,12 +37,16 @@ class ItemBase {
         
     }
     
-    public getName(): string {
+    public getItemName(): string {
         return this.itemName
     }
     
     public canUse(): boolean {
         return false
+    }
+    
+    public reason(): string {
+        return ""
     }
     
 }
@@ -58,7 +62,7 @@ class ItemEmpty extends ItemBase {
         
     }
     
-    public getName(): string {
+    public getItemName(): string {
         return this.itemName
     }
     
@@ -84,12 +88,16 @@ class ItemHealthPotion extends ItemBase {
         
     }
     
-    public getName(): string {
+    public getItemName(): string {
         return this.itemName
     }
     
     public canUse() {
         return info.life() != 5
+    }
+    
+    public reason(): string {
+        return ""
     }
     
 }
@@ -110,7 +118,7 @@ class ItemBurger extends ItemBase {
         
     }
     
-    public getName(): string {
+    public getItemName(): string {
         return this.itemName
     }
     
@@ -179,13 +187,42 @@ function calcDistance(posX1: number, posY1: number, posX2: number, posY2: number
     return Math.sqrt(xDiff * xDiff + yDiff * yDiff)
 }
 
+function spriteToScreen(textSprite: Sprite): number[] {
+    // #TODO remove the hardcoded values.
+    return [clamp(80, 3120, playerOne.x) - (scene.screenWidth() - textSprite.width) / 2, clamp(116, 3196, playerOne.y + (scene.screenHeight() - textSprite.height) / 2)]
+}
+
 // END Utils
 namespace SpriteKind {
     export const Item = SpriteKind.create()
 }
 
+function executeAction(actionID: number) {
+    if (actionID == 0) {
+        // Inventory
+        console.log("Inventory Not implmented")
+    } else if (actionID == 1) {
+        // Attack
+        console.log("Attack Not implemented")
+    } else if (actionID == 2) {
+        // Health Potion TODO add a notify system that pops up to inform the user why they can't drink or use an item.
+        for (let item of playerInventory) {
+            if (item.getItemName() == "HealthPotion") {
+                if (item.canUse()) {
+                    item.useItem()
+                    console.log("Used item")
+                }
+                
+            }
+            
+        }
+    }
+    
+}
+
 function updatePlayer() {
     
+    // START Movement
     if (controller.up.isPressed()) {
         playerOne.y += playerSpeed * -1
     }
@@ -202,9 +239,10 @@ function updatePlayer() {
         playerOne.x += playerSpeed * -1
     }
     
+    // END Movement
     if (controller.A.isPressed()) {
         // Use Actions
-        
+        executeAction(actionSelectIndex)
     }
     
     if (controller.B.isPressed()) {
@@ -217,17 +255,20 @@ function updatePlayer() {
             
             playerAction.destroy()
             playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
+            playerAction.setFlag(SpriteFlag.AutoDestroy, true)
         }
         
     }
     
-    playerAction.x = clamp(Math.max(playerOne.x - (scene.screenWidth() - playerAction.width) / 2, playerAction.width / 2), 3118, playerOne.x - (scene.screenWidth() - playerAction.width) / 2)
-    // Good
-    playerAction.y = clamp(116, 3196, playerOne.y + (scene.screenHeight() - playerAction.height) / 2)
-    console.log("X: " + playerOne.x + " Y:" + playerOne.y + " width: " + playerAction.width + " X2:" + playerAction.x)
+    let textPos = spriteToScreen(playerAction)
+    playerAction.x = textPos[0]
+    playerAction.y = textPos[1]
 }
 
-function updateEntities(range2: number) {
+// This will update all nearby enemies alongside load them in and out.
+// So we check where the player is and if an enemy should be their spawn it in if it's not done already. 
+//  The range idk why as its best to be hard coded in instead.
+function updateEntities() {
     
 }
 
@@ -246,7 +287,8 @@ let playerSpeed = 0
 let playerOne : Sprite = null
 let playerAction : TextSprite = null
 playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
-let playerInventory : number[][] = []
+// This not working ill use ids instead. Inheritance might be broken or something.
+let playerInventory = [new ItemHealthPotion(), new ItemEmpty(), new ItemEmpty(), new ItemEmpty()]
 let levelID = 0
 tiles.setCurrentTilemap(tilemap`
     level1
@@ -256,14 +298,14 @@ playerOne = sprites.create(assets.image`
 `, SpriteKind.Player)
 playerSpeed = 1
 scene.cameraFollowSprite(playerOne)
-info.setLife(5)
+info.setLife(1)
 game.stats = true
 let actionSwapDelay = new msDelay()
-playerOne.x = 3000
+let inventoryOpen = false
+// playerOne.x = 3000
 // playerOne.y = 3000
 forever(function on_forever() {
     updatePlayer()
-    updateEntities(16)
-    // TODO why did i put a range value here?
+    updateEntities()
     collisionCheck()
 })

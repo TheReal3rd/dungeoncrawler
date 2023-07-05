@@ -1,21 +1,24 @@
 
 #START Items definitions
-class ItemBase():
+class ItemBase():# This is a template to all Items.
     itemName = "Empty"
     texture = assets.image("""EmptyItem""")
 
-    def __init__(self, itemName, texture):
-        self.itemname = itemName
+    def __init__(self, name, texture):
+        self.itemName = name
         self.texture = texture
 
     def useItem(self):
         pass
 
-    def getName(self):
+    def getItemName(self):
         return self.itemName
 
     def canUse(self):
         return False
+
+    def reason(self):
+        return ""
 
 class ItemEmpty(ItemBase):
     def __init__(self):
@@ -24,7 +27,7 @@ class ItemEmpty(ItemBase):
     def useItem(self):
         pass
 
-    def getName(self):
+    def getItemName(self):
         return self.itemName
 
     def canUse(self):
@@ -40,11 +43,14 @@ class ItemHealthPotion(ItemBase):
             if(info.life() >= 6):
                 info.set_life(5)
 
-    def getName(self):
+    def getItemName(self):
         return self.itemName
 
     def canUse(self):
         return info.life() != 5
+
+    def reason(self):
+        return ""
 
 class ItemBurger(ItemBase):
     def __init__(self):
@@ -56,7 +62,7 @@ class ItemBurger(ItemBase):
             if(info.life() >= 6):
                 info.set_life(5)
 
-    def getName(self):
+    def getItemName(self):
         return self.itemName
 
     def canUse(self):
@@ -90,15 +96,34 @@ def calcDistance(posX1: number, posY1: number, posX2: number, posY2: number):
     xDiff = posX1 - posX2
     yDiff = posY1 - posY2
     return Math.sqrt(xDiff * xDiff + yDiff * yDiff)
-#END Utils
 
+def spriteToScreen(textSprite: Sprite):##TODO remove the hardcoded values.
+    return (
+        clamp(80, 3120, playerOne.x) - ((scene.screen_width() - textSprite.width) / 2) ,
+        clamp(116, 3196, (playerOne.y + ((scene.screen_height() - textSprite.height) / 2)))
+    )
+
+#END Utils
 
 @namespace
 class SpriteKind:
     Item = SpriteKind.create()
 
+def executeAction(actionID):
+    if actionID == 0:#Inventory
+        print("Inventory Not implmented")
+    elif actionID == 1:#Attack
+        print("Attack Not implemented")
+    elif actionID == 2:#Health Potion TODO add a notify system that pops up to inform the user why they can't drink or use an item.
+        for item in playerInventory:
+            if item.getItemName() == "HealthPotion":
+                if item.canUse():
+                    item.useItem()
+                    print("Used item")
+    
 def updatePlayer():
     global playerAction, actionSelectIndex, actionsStrings
+    #START Movement
     if controller.up.is_pressed():
         playerOne.y += playerSpeed * -1
     if controller.down.is_pressed():
@@ -107,8 +132,9 @@ def updatePlayer():
         playerOne.x += playerSpeed
     if controller.left.is_pressed():
         playerOne.x += playerSpeed * -1
+    #END Movement
     if controller.A.is_pressed():#Use Actions
-        pass
+        executeAction(actionSelectIndex)
     if controller.B.is_pressed():#Actions
         if(actionSwapDelay.passedMS(500)):
             actionSelectIndex += 1
@@ -116,19 +142,16 @@ def updatePlayer():
                 actionSelectIndex = 0
             playerAction.destroy()
             playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
+            playerAction.set_flag(SpriteFlag.AUTO_DESTROY, True)
 
+    textPos = spriteToScreen(playerAction)
+    playerAction.x = textPos[0]
+    playerAction.y = textPos[1]
 
-    playerAction.x = clamp(
-        Math.max(playerOne.x - ((scene.screen_width() - playerAction.width) / 2), (playerAction.width / 2)), 
-        3118,
-        playerOne.x - ((scene.screen_width() - playerAction.width) / 2)
-    )
-    #Good
-    playerAction.y = clamp(116, 3196, (playerOne.y + ((scene.screen_height() - playerAction.height) / 2)))
-        
-    print("X: "+ playerOne.x +" Y:"+playerOne.y+ " width: "+playerAction.width+ " X2:"+ playerAction.x)
-
-def updateEntities(range2: number):
+#This will update all nearby enemies alongside load them in and out.
+#So we check where the player is and if an enemy should be their spawn it in if it's not done already. 
+# The range idk why as its best to be hard coded in instead.
+def updateEntities():
     pass
 
 def collisionCheck():
@@ -150,7 +173,8 @@ playerSpeed = 0
 playerOne: Sprite = None
 playerAction: TextSprite = None
 playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
-playerInventory: List[any] = []
+#This not working ill use ids instead. Inheritance might be broken or something.
+playerInventory = [0,0,0,0]
 levelID = 0
 tiles.set_current_tilemap(tilemap("""
     level1
@@ -160,15 +184,16 @@ playerOne = sprites.create(assets.image("""
 """), SpriteKind.player)
 playerSpeed = 1
 scene.camera_follow_sprite(playerOne)
-info.set_life(5)
+info.set_life(1)
 game.stats = True
 actionSwapDelay = msDelay()
+inventoryOpen = False
 
-playerOne.x = 3000
+#playerOne.x = 3000
 #playerOne.y = 3000
 
 def on_forever():
     updatePlayer()
-    updateEntities(16)#TODO why did i put a range value here?
+    updateEntities()
     collisionCheck()
 forever(on_forever)
