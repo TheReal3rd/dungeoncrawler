@@ -1,26 +1,30 @@
-// TODO list
-//  1. Create Inventory system.
+// TODO list:
 //  2. Create enemies. (Multiple types with different behaviour)
 //  3. Complete the game world.
 //  4. Add player animations.
-// Low Prio list
-//  1. 
+//  5. Add player stats attack, defense and more.
+// Low Prio list:
+//  1. Add stats screen
 //  START Items
 //  Item list:
 //  Explination: okay Classes don't work properly so i can't create OOP like item definitions so im going to use ids. (Its gonna be kinda slow)
 //  0 = None
 //  1 = HealthPotion
 //  2 = Burger
-//  3 = Iron_Sword (TODO)
+//  3 = Iron_Sword
 //  4 = Wooden_Shield (TODO)
 //  5 = Iron_Armour_Set (TODO)
-function getImage(itemID: any): Image {
+function getImage(itemID: number): Image {
     if (itemID == 1) {
         //  Health pot
         return assets.image`HealthItem`
     } else if (itemID == 2) {
         //  Burger
         return assets.image`BurgerItem`
+    } else if (itemID == 3) {
+        return assets.image`SwordItem`
+    } else if (itemID == 4) {
+        return assets.image`ShieldItem`
     } else {
         //  None
         return assets.image`EmptyItem`
@@ -29,16 +33,20 @@ function getImage(itemID: any): Image {
 }
 
 function useItem(itemID: number) {
+    
     if ([1, 2].indexOf(itemID) >= 0) {
         //  Health pot and burger
-        if (useCondition(itemID)) {
-            info.changeLifeBy(2)
-            if (info.life() >= 6) {
-                info.setLife(5)
-            }
-            
+        info.changeLifeBy(2)
+        if (info.life() >= 6) {
+            info.setLife(5)
         }
         
+    } else if (itemID == 3) {
+        // Sword
+        playerAttack += 1
+    } else if (itemID == 4) {
+        // Shield
+        playerDefense += 1
     } else {
         //  None
         
@@ -52,7 +60,7 @@ function useCondition(itemID: number): boolean {
         return info.life() != 5
     } else {
         //  None
-        return true
+        return false
     }
     
 }
@@ -60,10 +68,14 @@ function useCondition(itemID: number): boolean {
 //  END Items
 // START Inventory
 function offScreen() {
+    let x: number;
     
     inventorySprite.setPosition(-1000, -1000)
-    for (let x = 0; x < 4; x++) {
+    for (x = 0; x < 4; x++) {
         buttons[x].setPosition(-1000, -1000)
+    }
+    for (x = 0; x < 4; x++) {
+        items[x].setPosition(-1000, -1000)
     }
 }
 
@@ -77,13 +89,17 @@ function onScreen() {
         pos = spriteToScreen(buttons[x])
         buttons[x].x = pos[0] + (scene.screenWidth() - buttons[x].width)
         buttons[x].y = pos[1] + yOffset
-        yOffset += 18
         if (inventorySlot == x) {
             buttons[x].setImage(assets.image`inventoryButtonLit`)
         } else {
             buttons[x].setImage(assets.image`inventoryButton0`)
         }
         
+        items[x].setImage(getImage(playerInventory[x]))
+        pos = spriteToScreen(items[x])
+        items[x].x = pos[0] + (scene.screenWidth() - items[x].width)
+        items[x].y = pos[1] + yOffset
+        yOffset += 18
     }
 }
 
@@ -108,6 +124,7 @@ function calcDistance(posX1: number, posY1: number, posX2: number, posY2: number
 }
 
 function spriteToScreen(textSprite: Sprite): number[] {
+    
     //  X_range = 80
     //  Y_range = 60
     //  tile_size = 16
@@ -168,25 +185,34 @@ namespace SpriteKind {
 
 // Main instructions
 function executeAction(actionID: number) {
+    let itemID: number;
     
     //  Health Potion TODO add a notify system that pops up to inform the user why they can't drink or use an item.
     if (actionID == 0) {
         //  Inventory
-        if (inventoryOpenDelay.passedMS(200)) {
-            inventoryOpen = !inventoryOpen
-            console.log("Open")
-        }
-        
+        inventoryOpen = !inventoryOpen
     } else if (actionID == 1) {
         //  Attack
         console.log("Attack Not implemented")
     } else if (actionID == 2) {
-        useItem(1)
+        for (let x = 0; x < 4; x++) {
+            itemID = playerInventory[x]
+            if ([1, 2].indexOf(itemID) >= 0) {
+                if (useCondition(itemID)) {
+                    useItem(itemID)
+                    playerInventory[x] = 0
+                    break
+                }
+                
+            }
+            
+        }
     }
     
 }
 
 function updatePlayer() {
+    let itemID: number;
     let textPos: number[];
     
     // Inventory
@@ -194,28 +220,31 @@ function updatePlayer() {
         onScreen()
         if (inventoryInputDelay.passedMS(250)) {
             if (controller.up.isPressed()) {
-                inventorySlot = inventorySlot - 1
+                inventorySlot += -1
             } else if (controller.down.isPressed()) {
-                inventorySlot = inventorySlot + 1
+                inventorySlot += 1
             }
             
         }
         
         inventorySlot = clamp(0, 3, inventorySlot)
-        if (controller.B.isPressed()) {
+        if (controller.A.isPressed()) {
             if (inventoryOpenDelay.passedMS(200)) {
                 inventoryOpen = false
+                offScreen()
                 actionSwapDelay.reset()
-                return
             }
             
-        } else if (controller.A.isPressed()) {
+        } else if (controller.B.isPressed()) {
+            itemID = playerInventory[inventorySlot]
+            if (useCondition(itemID)) {
+                useItem(itemID)
+                playerInventory[inventorySlot] = 0
+            }
             
         }
         
     } else {
-        // TODO add use item functionlity
-        offScreen()
         //  START Movement
         if (controller.up.isPressed()) {
             playerOne.y += playerSpeed * -1
@@ -232,7 +261,10 @@ function updatePlayer() {
         //  END Movement
         if (controller.A.isPressed()) {
             //  Use Actions
-            executeAction(actionSelectIndex)
+            if (inventoryOpenDelay.passedMS(200)) {
+                executeAction(actionSelectIndex)
+            }
+            
         }
         
         if (controller.B.isPressed()) {
@@ -264,49 +296,50 @@ function updateEntities() {
     
 }
 
-function collisionCheck() {
-    
-}
-
 // START of on start
-//  Consts
-let maxNumItems = 4
-let actionsStrings = ["Inventory", "Attack", "Health Potion"]
-//  Their is a minimap extension that i could use? maybe get the core game in then start adding features. This is to test the consoles limits.
-scene.setBackgroundColor(2)
-let actionSelectIndex = 0
-//  This not working ill use ids instead. Inheritance might be broken or something.
-let playerInventory = [0, 0, 0, 0]
-let levelID = 0
-tiles.setCurrentTilemap(tilemap`
-    level1
-`)
-info.setLife(3)
-game.stats = true
-let actionSwapDelay = new msDelay()
-// Player
-let playerSpeed = 1
-let playerLevel = 1
-playerSpeed = 0
-let playerOne = sprites.create(assets.image`
-    PlayerIdle
-`, SpriteKind.Player)
-scene.cameraFollowSprite(playerOne)
-let playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
 // Inventory Vars
 let inventorySprite = sprites.create(assets.image`inventoryBG`, SpriteKind.Inventory)
 let inventoryOpenDelay = new msDelay()
 let inventoryInputDelay = new msDelay()
 let inventoryOpen = false
 let inventorySlot = 0
+// TODO combine these arrays and create range sets.
 let buttons = [sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory)]
-// Buttons END
+let items = [sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory)]
+//  START Consts
+let maxNumItems = 4
+let actionsStrings = ["Inventory", "Attack", "Health Item"]
+// In the future add stats window
+//  END Consts
+//  Their is a minimap extension that i could use? maybe get the core game in then start adding features. This is to test the consoles limits.
+scene.setBackgroundColor(2)
+tiles.setCurrentTilemap(tilemap`
+    level1
+`)
+game.stats = true
+// Player
+let actionSelectIndex = 0
+//  This not working ill use ids instead. Inheritance might be broken or something.
+let playerInventory = [3, 1, 2, 4]
+info.setLife(3)
+let actionSwapDelay = new msDelay()
+let playerAction : TextSprite = null
+let playerOne : Sprite = null
+let playerSpeed = 1
+let playerLevel = 1
+let playerAttack = 1
+let playerDefense = 1
+playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
+playerOne = sprites.create(assets.image`
+    PlayerIdle
+`, SpriteKind.Player)
+scene.cameraFollowSprite(playerOne)
 // playerOne.x = 3000
 // playerOne.y = 3000
 // END of on start
+offScreen()
 // print(scene.screen_width() +" " + scene.screen_height())
 forever(function on_forever() {
     updatePlayer()
     updateEntities()
-    collisionCheck()
 })
