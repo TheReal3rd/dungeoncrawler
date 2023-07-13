@@ -3,6 +3,8 @@
 //  3. Complete the game world.
 //  4. Add player animations.
 //  5. Add player stats attack, defense and more.
+//  6. Add notification system to notify the user on certain stats and reasons.
+//  7. Inventory add item interact options (Use, Drop, Inspect)
 // Low Prio list:
 //  1. Add stats screen
 //  START Items
@@ -12,7 +14,7 @@
 //  1 = HealthPotion
 //  2 = Burger
 //  3 = Iron_Sword
-//  4 = Wooden_Shield (TODO)
+//  4 = Wooden_Shield
 //  5 = Iron_Armour_Set (TODO)
 function getImage(itemID: number): Image {
     if (itemID == 1) {
@@ -58,6 +60,10 @@ function useCondition(itemID: number): boolean {
     if ([1, 2].indexOf(itemID) >= 0) {
         //  Health pot
         return info.life() != 5
+    }
+    
+    if ([3, 4].indexOf(itemID) >= 0) {
+        return true
     } else {
         //  None
         return false
@@ -67,18 +73,16 @@ function useCondition(itemID: number): boolean {
 
 //  END Items
 // START Inventory
+// Move all Inventory elements offScreen.
 function offScreen() {
-    let x: number;
     
     inventorySprite.setPosition(-1000, -1000)
-    for (x = 0; x < 4; x++) {
-        buttons[x].setPosition(-1000, -1000)
-    }
-    for (x = 0; x < 4; x++) {
-        items[x].setPosition(-1000, -1000)
+    for (let x = 0; x < 8; x++) {
+        invSprites[x].setPosition(-1000, -1000)
     }
 }
 
+// Move all Inventory elements onScreen and into correct positions alongside update their image.
 function onScreen() {
     
     let pos = spriteToScreen(inventorySprite)
@@ -86,25 +90,26 @@ function onScreen() {
     inventorySprite.y = pos[1]
     let yOffset = 23
     for (let x = 0; x < 4; x++) {
-        pos = spriteToScreen(buttons[x])
-        buttons[x].x = pos[0] + (scene.screenWidth() - buttons[x].width)
-        buttons[x].y = pos[1] + yOffset
+        pos = spriteToScreen(invSprites[x])
+        invSprites[x].x = pos[0] + (scene.screenWidth() - invSprites[x].width)
+        invSprites[x].y = pos[1] + yOffset
         if (inventorySlot == x) {
-            buttons[x].setImage(assets.image`inventoryButtonLit`)
+            invSprites[x].setImage(assets.image`inventoryButtonLit`)
         } else {
-            buttons[x].setImage(assets.image`inventoryButton0`)
+            invSprites[x].setImage(assets.image`inventoryButton0`)
         }
         
-        items[x].setImage(getImage(playerInventory[x]))
-        pos = spriteToScreen(items[x])
-        items[x].x = pos[0] + (scene.screenWidth() - items[x].width)
-        items[x].y = pos[1] + yOffset
+        invSprites[x + 4].setImage(getImage(playerInventory[x]))
+        pos = spriteToScreen(invSprites[x + 4])
+        invSprites[x + 4].x = pos[0] + (scene.screenWidth() - invSprites[x + 4].width)
+        invSprites[x + 4].y = pos[1] + yOffset
         yOffset += 18
     }
 }
 
 // END Inventory
 //  START Utils
+// Clamp reduce number within a set range.
 function clamp(minNum: number, maxNum: number, value: number): number {
     if (value < minNum) {
         return minNum
@@ -117,12 +122,14 @@ function clamp(minNum: number, maxNum: number, value: number): number {
     return value
 }
 
+// Calculate the pixel distance from one position to another.
 function calcDistance(posX1: number, posY1: number, posX2: number, posY2: number): number {
     let xDiff = posX1 - posX2
     let yDiff = posY1 - posY2
     return Math.sqrt(xDiff * xDiff + yDiff * yDiff)
 }
 
+// Position sprite within game window by calculating the screen size and tile map size.
 function spriteToScreen(textSprite: Sprite): number[] {
     
     //  X_range = 80
@@ -187,7 +194,6 @@ namespace SpriteKind {
 function executeAction(actionID: number) {
     let itemID: number;
     
-    //  Health Potion TODO add a notify system that pops up to inform the user why they can't drink or use an item.
     if (actionID == 0) {
         //  Inventory
         inventoryOpen = !inventoryOpen
@@ -225,8 +231,16 @@ function updatePlayer() {
                 inventorySlot += 1
             }
             
+            if (controller.left.isPressed()) {
+                
+            } else if (controller.right.isPressed()) {
+                // Drop Item
+                
+            }
+            
         }
         
+        // Inspect
         inventorySlot = clamp(0, 3, inventorySlot)
         if (controller.A.isPressed()) {
             if (inventoryOpenDelay.passedMS(200)) {
@@ -303,9 +317,7 @@ let inventoryOpenDelay = new msDelay()
 let inventoryInputDelay = new msDelay()
 let inventoryOpen = false
 let inventorySlot = 0
-// TODO combine these arrays and create range sets.
-let buttons = [sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory)]
-let items = [sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory)]
+let invSprites = [sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory)]
 //  START Consts
 let maxNumItems = 4
 let actionsStrings = ["Inventory", "Attack", "Health Item"]
@@ -334,11 +346,13 @@ playerOne = sprites.create(assets.image`
     PlayerIdle
 `, SpriteKind.Player)
 scene.cameraFollowSprite(playerOne)
+let playerAnimFrame = 1
+let playerAnimDelay = new msDelay()
 // playerOne.x = 3000
 // playerOne.y = 3000
 // END of on start
+// game.debug = True
 offScreen()
-// print(scene.screen_width() +" " + scene.screen_height())
 forever(function on_forever() {
     updatePlayer()
     updateEntities()

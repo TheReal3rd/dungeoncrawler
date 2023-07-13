@@ -3,9 +3,10 @@
 # 3. Complete the game world.
 # 4. Add player animations.
 # 5. Add player stats attack, defense and more.
+# 6. Add notification system to notify the user on certain stats and reasons.
+# 7. Inventory add item interact options (Use, Drop, Inspect)
 #Low Prio list:
 # 1. Add stats screen
-
 
 # START Items
 # Item list:
@@ -14,7 +15,7 @@
 # 1 = HealthPotion
 # 2 = Burger
 # 3 = Iron_Sword
-# 4 = Wooden_Shield (TODO)
+# 4 = Wooden_Shield
 # 5 = Iron_Armour_Set (TODO)
 def getImage(itemID):
     if itemID == 1:# Health pot
@@ -27,7 +28,6 @@ def getImage(itemID):
         return assets.image("""ShieldItem""")
     else:# None
         return assets.image("""EmptyItem""")
-
 
 def useItem(itemID):
     global playerAttack, playerDefense
@@ -42,51 +42,51 @@ def useItem(itemID):
     else:# None
         pass
 
-
-
 def useCondition(itemID):
     if itemID in (1, 2):# Health pot
         return info.life() != 5
+    if itemID in (3, 4):
+        return True
     else:# None
         return False
 
 # END Items
 #START Inventory
 
+#Move all Inventory elements offScreen.
 def offScreen():
-    global inventorySprite, buttons
+    global inventorySprite, invSprites
     inventorySprite.set_position(-1000, -1000)
-    for x in range(0, 4):
-        buttons[x].set_position(-1000, -1000)
-    for x in range(0, 4):
-        items[x].set_position(-1000, -1000)
+    for x in range(0, 8):
+        invSprites[x].set_position(-1000, -1000)
             
-
+#Move all Inventory elements onScreen and into correct positions alongside update their image.
 def onScreen():
-    global inventorySprite, buttons, playerInventory, items
+    global inventorySprite, invSprites, playerInventory
     pos = spriteToScreen(inventorySprite)
     inventorySprite.x = pos[0]
     inventorySprite.y = pos[1]
 
     yOffset = 23
     for x in range(0, 4):
-        pos = spriteToScreen(buttons[x])
-        buttons[x].x = pos[0] + (scene.screen_width() - buttons[x].width)
-        buttons[x].y = pos[1] + yOffset
+        pos = spriteToScreen(invSprites[x])
+        invSprites[x].x = pos[0] + (scene.screen_width() - invSprites[x].width)
+        invSprites[x].y = pos[1] + yOffset
 
         if inventorySlot == x:
-            buttons[x].set_image(assets.image("""inventoryButtonLit"""))
+            invSprites[x].set_image(assets.image("""inventoryButtonLit"""))
         else:
-            buttons[x].set_image(assets.image("""inventoryButton0""")) 
-    
-        items[x].set_image(getImage(playerInventory[x]))
-        pos = spriteToScreen(items[x])
-        items[x].x = pos[0] + (scene.screen_width() - items[x].width)
-        items[x].y = pos[1] + yOffset
+            invSprites[x].set_image(assets.image("""inventoryButton0""")) 
+
+        invSprites[x + 4].set_image(getImage(playerInventory[x]))
+        pos = spriteToScreen(invSprites[x + 4])
+        invSprites[x + 4].x = pos[0] + (scene.screen_width() - invSprites[x + 4].width)
+        invSprites[x + 4].y = pos[1] + yOffset
         yOffset += 18
 
 #END Inventory
 # START Utils
+#Clamp reduce number within a set range.
 def clamp(minNum: number, maxNum: number, value: number):
     if value < minNum:
         return minNum
@@ -94,11 +94,13 @@ def clamp(minNum: number, maxNum: number, value: number):
         return maxNum
     return value
 
+#Calculate the pixel distance from one position to another.
 def calcDistance(posX1: number, posY1: number, posX2: number, posY2: number):
     xDiff = posX1 - posX2
     yDiff = posY1 - posY2
     return Math.sqrt(xDiff * xDiff + yDiff * yDiff)
 
+#Position sprite within game window by calculating the screen size and tile map size.
 def spriteToScreen(textSprite: Sprite):
     global playerOne
     # X_range = 80
@@ -140,7 +142,6 @@ class SpriteKind:
 #Main instructions
 def executeAction(actionID: number):
     global inventoryOpen, inventoryOpenDelay
-    # Health Potion TODO add a notify system that pops up to inform the user why they can't drink or use an item.
     if actionID == 0:# Inventory
         inventoryOpen = not inventoryOpen
     elif actionID == 1:# Attack
@@ -155,7 +156,7 @@ def executeAction(actionID: number):
                     break
 
 def updatePlayer():
-    global playerSpeed, playerOne, actionSelectIndex, playerAction, inventoryOpen, inventorySprite, actionSwapDelay, buttons, inventorySlot, inventoryInputDelay
+    global playerSpeed, playerOne, actionSelectIndex, playerAction, inventoryOpen, inventorySprite, actionSwapDelay, invSprites, inventorySlot, inventoryInputDelay
     #Inventory
     if inventoryOpen:
         onScreen()
@@ -165,6 +166,11 @@ def updatePlayer():
                 inventorySlot += -1
             elif controller.down.is_pressed():
                 inventorySlot += 1
+                
+            if controller.left.is_pressed():
+                pass#Drop Item
+            elif controller.right.is_pressed():
+                pass#Inspect
 
         inventorySlot = clamp(0, 3, inventorySlot)
         if controller.A.is_pressed(): 
@@ -181,12 +187,16 @@ def updatePlayer():
         # START Movement
         if controller.up.is_pressed():
             playerOne.y += playerSpeed * -1
+
         elif controller.down.is_pressed():
             playerOne.y += playerSpeed
+
         if controller.right.is_pressed():
             playerOne.x += playerSpeed
+
         elif controller.left.is_pressed():
             playerOne.x += playerSpeed * -1
+
         # END Movement
         if controller.A.is_pressed():
             # Use Actions
@@ -222,14 +232,11 @@ inventoryOpenDelay = msDelay()
 inventoryInputDelay = msDelay()
 inventoryOpen = False
 inventorySlot = 0
-#TODO combine these arrays and create range sets.
-buttons = [
+invSprites = [
     sprites.create(assets.image("""inventoryButton0"""), SpriteKind.Inventory),
     sprites.create(assets.image("""inventoryButton0"""), SpriteKind.Inventory),
     sprites.create(assets.image("""inventoryButton0"""), SpriteKind.Inventory),
-    sprites.create(assets.image("""inventoryButton0"""), SpriteKind.Inventory)
-]
-items = [
+    sprites.create(assets.image("""inventoryButton0"""), SpriteKind.Inventory),
     sprites.create(assets.image("""EmptyItem"""), SpriteKind.Inventory),
     sprites.create(assets.image("""EmptyItem"""), SpriteKind.Inventory),
     sprites.create(assets.image("""EmptyItem"""), SpriteKind.Inventory),
@@ -263,15 +270,15 @@ playerOne = sprites.create(assets.image("""
     PlayerIdle
 """), SpriteKind.player)
 scene.camera_follow_sprite(playerOne)
+playerAnimFrame = 1
+playerAnimDelay = msDelay()
 
 #playerOne.x = 3000
 #playerOne.y = 3000
 #END of on start
-
+#game.debug = True
 offScreen()
 def on_forever():
     updatePlayer()
     updateEntities()
-
-    #print(scene.screen_width() +" " + scene.screen_height())
 forever(on_forever)
