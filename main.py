@@ -3,10 +3,9 @@
 # 3. Complete the game world.
 # 4. Add player animations.
 # 5. Add player stats attack, defense and more.
-# 6. Add notification system to notify the user on certain stats and reasons.
-# 7. Inventory add item interact options (Use, Drop, Inspect)
 #Low Prio list:
 # 1. Add stats screen
+# 2. Inventory doesn't show on the console for some reason. Not sure why?
 
 # START Items
 # Item list:
@@ -50,6 +49,18 @@ def useCondition(itemID):
     else:# None
         return False
 
+def getDescription(itemID):
+    if itemID == 1:# Health pot
+        return "HP potion heals you."
+    elif itemID == 2:# Burger
+        return "Burger heals you."
+    elif itemID == 3:
+        return "Improve your attack."
+    elif itemID == 4:
+        return "Improve your defense."
+    else:# None
+        return "Empty slot."
+
 # END Items
 #START Inventory
 
@@ -72,6 +83,8 @@ def onScreen():
         pos = spriteToScreen(invSprites[x])
         invSprites[x].x = pos[0] + (scene.screen_width() - invSprites[x].width)
         invSprites[x].y = pos[1] + yOffset
+        invSprites[x].z = 200
+        invSprites[x + 4].z = 210
 
         if inventorySlot == x:
             invSprites[x].set_image(assets.image("""inventoryButtonLit"""))
@@ -114,6 +127,11 @@ def spriteToScreen(textSprite: Sprite):
         clamp(60, 3140, playerOne.y) - (scene.screen_height() - textSprite.height) / 2
         ]
 
+def sendNotify(text):
+    global notifyText, notifyDisplayTimer
+    notifyText = textsprite.create(text, 10, 15)
+    notifyDisplayTimer.reset()
+
 class msDelay():#This breaks blocks. and its annoying.
     time = 0
 
@@ -126,6 +144,12 @@ class msDelay():#This breaks blocks. and its annoying.
     def passedMS(self, amount):
         if(game.runtime() - self.time >= amount):
             self.reset()
+            return True
+        else:
+            return False
+
+    def passedMSNoReset(self, amount):
+        if(game.runtime() - self.time >= amount):
             return True
         else:
             return False
@@ -156,7 +180,7 @@ def executeAction(actionID: number):
                     break
 
 def updatePlayer():
-    global playerSpeed, playerOne, actionSelectIndex, playerAction, inventoryOpen, inventorySprite, actionSwapDelay, invSprites, inventorySlot, inventoryInputDelay
+    global droppedItemsTable, prompter, notifyText, notifyDisplayTimer, playerInventory, playerSpeed, playerOne, actionSelectIndex, playerAction, inventoryOpen, inventorySprite, actionSwapDelay, invSprites, inventorySlot, inventoryInputDelay
     #Inventory
     if inventoryOpen:
         onScreen()
@@ -167,10 +191,16 @@ def updatePlayer():
             elif controller.down.is_pressed():
                 inventorySlot += 1
                 
-            if controller.left.is_pressed():
-                pass#Drop Item
-            elif controller.right.is_pressed():
-                pass#Inspect
+            if controller.left.is_pressed():#Drop Item
+                itemID = playerInventory[inventorySlot]
+                tempSprite = sprites.create(getImage(itemID), SpriteKind.Item)
+                tempSprite.set_position(playerOne.x, playerOne.y)
+                tempSprite.z = playerOne.z - 1
+                droppedItemsTable.append((tempSprite.to_string(), ""+itemID))
+                playerInventory[inventorySlot] = 0
+            elif controller.right.is_pressed():#Inspect Item
+                if notifyText == None:
+                    sendNotify(getDescription(playerInventory[inventorySlot]))
 
         inventorySlot = clamp(0, 3, inventorySlot)
         if controller.A.is_pressed(): 
@@ -185,17 +215,29 @@ def updatePlayer():
                 playerInventory[inventorySlot] = 0
     else:
         # START Movement
+       
+        #playerFrameIndex = 0
+        #playerFrameOffsetIndex = 0
+        
+        moved = False
         if controller.up.is_pressed():
             playerOne.y += playerSpeed * -1
+            moved = True
 
         elif controller.down.is_pressed():
             playerOne.y += playerSpeed
+            moved = True
 
         if controller.right.is_pressed():
             playerOne.x += playerSpeed
 
         elif controller.left.is_pressed():
             playerOne.x += playerSpeed * -1
+
+        if moved:
+            pass
+        else:
+            playerFrameIndex = 0
 
         # END Movement
         if controller.A.is_pressed():
@@ -205,27 +247,73 @@ def updatePlayer():
         if controller.B.is_pressed():
             # Actions
             if actionSwapDelay.passedMS(500):
-                actionSelectIndex += 1
-                if actionSelectIndex >= 3:
-                    actionSelectIndex = 0
-                    
-                playerAction.destroy()
-                playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
-                playerAction.set_flag(SpriteFlag.AUTO_DESTROY, True)
+                if prompter == None:
+                    actionSelectIndex += 1
+                    if actionSelectIndex >= 3:
+                        actionSelectIndex = 0
+                                            
+                    playerAction.destroy()
+                    playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
+                    playerAction.set_flag(SpriteFlag.AUTO_DESTROY, True)
+                else:#Pick up
+                    close = False
+                    for dropItem in droppedItemsTable:
+                        if close:
+                            break
+                        else:
+                            if dropItem[0] == prompter.to_string():
+                                for index in range(0, 4):
+                                    if playerInventory[index] == 0:
+                                        playerInventory[index] = int(dropItem[1])
+                                        close = True
+                                        prompter.set_position(-1000, -1000)
+                                        prompter.set_flag(SpriteFlag.AUTO_DESTROY, True)
+                                        sprites.destroy(prompter)
+                                        break
 
         #Action Text
         textPos = spriteToScreen(playerAction)
         playerAction.x = textPos[0]
         playerAction.y = textPos[1] + (scene.screen_height() - playerAction.height)
 
+    #Notify Text
+    if notifyText != None:
+        textPos = spriteToScreen(notifyText)
+        notifyText.x = textPos[0] + (scene.screen_width() - notifyText.width)
+        notifyText.y = textPos[1]# + (scene.screen_height() - playerAction.height)
+        if notifyDisplayTimer.passedMS(2000):
+            notifyText.set_position(-1000,-1000)
+            notifyText.destroy()
+            notifyText = None
 
 
 # This will update all nearby enemies alongside load them in and out.
 # So we check where the player is and if an enemy should be their spawn it in if it's not done already. 
 def updateEntities():
-    pass
+    global prompter, playerOne
+    #Items update
+    if prompter == None:
+        for item in sprites.all_of_kind(SpriteKind.Item):
+            dist = calcDistance(item.x, item.y, playerOne.x, playerOne.y)
+            if(dist >= 10):
+                continue
+                    
+            if item.overlaps_with(playerOne):
+                prompter = item
+                break
+    else:
+        dist = calcDistance(prompter.x, prompter.y, playerOne.x, playerOne.y)
+        if(dist >= 10):
+            prompter = None
+            pickupPrompt.set_position(-1000, -1000)
+        else:
+            pickupPrompt.set_position(prompter.x, prompter.y - (pickupPrompt.height * 2))
 
 #START of on start
+#notify
+notifyText: TextSprite = None 
+notifyDisplayTimer = msDelay()
+
 #Inventory Vars
 inventorySprite = sprites.create(assets.image("""inventoryBG"""), SpriteKind.Inventory)
 inventoryOpenDelay = msDelay()
@@ -242,12 +330,19 @@ invSprites = [
     sprites.create(assets.image("""EmptyItem"""), SpriteKind.Inventory),
     sprites.create(assets.image("""EmptyItem"""), SpriteKind.Inventory)
 ]
+#Prompt
+prompter: Sprite = None
+pickupPrompt: TextSprite = textsprite.create("Press B to pickup", 10, 15)
+pickupPrompt.set_position(-1000,-1000)
+droppedItemsTable = [
+    ("", "0")
+]
 
 # START Consts
 maxNumItems = 4
 actionsStrings = ["Inventory", "Attack", "Health Item"]#In the future add stats window
 # END Consts
-# Their is a minimap extension that i could use? maybe get the core game in then start adding features. This is to test the consoles limits.
+# There is a minimap extension that i could use? maybe get the core game in then start adding features. This is to test the consoles limits.
 scene.set_background_color(2)
 tiles.set_current_tilemap(tilemap("""
     level1
@@ -272,6 +367,25 @@ playerOne = sprites.create(assets.image("""
 scene.camera_follow_sprite(playerOne)
 playerAnimFrame = 1
 playerAnimDelay = msDelay()
+#Player animations
+playerFrameIndex = 0
+playerFrameOffsetIndex = 0
+playerFrames = [
+    #Idle
+    assets.image("""PlayerIdle"""),
+    #Down
+    assets.image("""PlayerWalkDown1"""),
+    assets.image("""PlayerWalkDown2"""),
+    assets.image("""PlayerWalkDown3"""),
+    #Up
+    assets.image("""PlayerWalkUp1"""),
+    assets.image("""PlayerWalkUp2"""),
+    assets.image("""PlayerWalkUp3"""),
+    #Left
+    #Right
+]
+
+#world
 
 #playerOne.x = 3000
 #playerOne.y = 3000

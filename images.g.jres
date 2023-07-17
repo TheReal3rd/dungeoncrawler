@@ -44,11 +44,6 @@
         "mimeType": "image/x-mkcd-f4",
         "displayName": "PlayerWalkDown1"
     },
-    "image9": {
-        "data": "hwQQABAAAAAAAAAAAAAAAAAAAP8AAAAAAAD////wDgAA8P/+7u8EAAD/7/JP/v//AP8u/xskQv/wLy7v/y1C//AiLu/ULVIP8CIu79QtUg/wLy7v/+3+DwD/Lv8b1O0PAP/v8k/e7QAA8O/+7k8OAAAA////7gAAAAAA/wAAAAAAAAAAAAAAAA==",
-        "mimeType": "image/x-mkcd-f4",
-        "displayName": "PlayerWalkDown2"
-    },
     "image5": {
         "data": "hwQkAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIiIAAADuACAiIg4AsO4vIiIiDgCw7v8iIiIOAADuACAiIg4AAAAAACLiAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
         "mimeType": "image/x-mkcd-f4",
@@ -74,8 +69,23 @@
         "mimeType": "image/x-mkcd-f4",
         "displayName": "PlayerMoveUp1"
     },
+    "image17": {
+        "data": "hwQQABAAAAAAAAAAAAAAAAAAAPAPAAAAAPD///7gRAAA/+/v7k9NAPD/Lv/k/v8A8O/yv9EuQv//4vL+3yRC/y/i8k7dJFIPL+LyTt0kUg//4vL+3yRC//Dv8r/RLkL/8P8u/+T+/wAA/+7v7k9NAADw///+4EQAAAAA8A8AAAAAAAAAAAAAAA==",
+        "mimeType": "image/x-mkcd-f4",
+        "displayName": "PlayerWalkDown2"
+    },
+    "image9": {
+        "data": "hwQQABAAAAAAAAAAAAAAAAAAAP8AAAAAAAD////wDgAA8P/+7u8EAAD/7/JP/v//AP8u/xskQv/wLy7v/y1C//AiLu/ULVIP8CIu79QtUg/wLy7v/+3+DwD/Lv8b1O0PAP/v8k/e7QAA8O/+7k8OAAAA////7gAAAAAA/wAAAAAAAAAAAAAAAA==",
+        "mimeType": "image/x-mkcd-f4",
+        "displayName": "PlayerWalkDown3"
+    },
     "image16": {
         "data": "hwQQABAAAAAAAAAAAAAAAAAAAADwDwAAAADw//8PTgAA8P/+7v7UBADv7//u7t8OAO8vIu/u7w7w7u8v8u4vD/D+Iu/u7i8P8P4i7+7uLw/w7u/y7+4v/wDvLy//7i//AO/v8vLu//8A8P/+7v5ODgAA8P//DwAAAAAAAPAPAAAAAAAAAAAAAA==",
+        "mimeType": "image/x-mkcd-f4",
+        "displayName": "PlayerMoveUp3"
+    },
+    "image18": {
+        "data": "hwQQABAAAAAAAAAAAAAAAAAAAPAPAAAAAPD///7gRAAA/+/v7k9NAPD+Lv/v/v8A8P7yIu/+Qv/v/i7y7v5C/+8v8u7u/kIP7y/y7u7+Qg/v/i7y7v5C//D+8iLv/kL/8P4u/+7+/wAA/+/v7k9NAADw///+4EQAAAAA8A8AAAAAAAAAAAAAAA==",
         "mimeType": "image/x-mkcd-f4",
         "displayName": "PlayerMoveUp2"
     },

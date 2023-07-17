@@ -3,10 +3,9 @@
 //  3. Complete the game world.
 //  4. Add player animations.
 //  5. Add player stats attack, defense and more.
-//  6. Add notification system to notify the user on certain stats and reasons.
-//  7. Inventory add item interact options (Use, Drop, Inspect)
 // Low Prio list:
 //  1. Add stats screen
+//  2. Inventory doesn't show on the console for some reason. Not sure why?
 //  START Items
 //  Item list:
 //  Explination: okay Classes don't work properly so i can't create OOP like item definitions so im going to use ids. (Its gonna be kinda slow)
@@ -71,6 +70,24 @@ function useCondition(itemID: number): boolean {
     
 }
 
+function getDescription(itemID: number): string {
+    if (itemID == 1) {
+        //  Health pot
+        return "HP potion heals you."
+    } else if (itemID == 2) {
+        //  Burger
+        return "Burger heals you."
+    } else if (itemID == 3) {
+        return "Improve your attack."
+    } else if (itemID == 4) {
+        return "Improve your defense."
+    } else {
+        //  None
+        return "Empty slot."
+    }
+    
+}
+
 //  END Items
 // START Inventory
 // Move all Inventory elements offScreen.
@@ -93,6 +110,8 @@ function onScreen() {
         pos = spriteToScreen(invSprites[x])
         invSprites[x].x = pos[0] + (scene.screenWidth() - invSprites[x].width)
         invSprites[x].y = pos[1] + yOffset
+        invSprites[x].z = 200
+        invSprites[x + 4].z = 210
         if (inventorySlot == x) {
             invSprites[x].setImage(assets.image`inventoryButtonLit`)
         } else {
@@ -141,6 +160,12 @@ function spriteToScreen(textSprite: Sprite): number[] {
     return [clamp(80, 3120, playerOne.x) - (scene.screenWidth() - textSprite.width) / 2, clamp(60, 3140, playerOne.y) - (scene.screenHeight() - textSprite.height) / 2]
 }
 
+function sendNotify(text: string) {
+    
+    notifyText = textsprite.create(text, 10, 15)
+    notifyDisplayTimer.reset()
+}
+
 class msDelay {
     static time: number
     private ___time_is_set: boolean
@@ -169,6 +194,15 @@ class msDelay {
     public passedMS(amount: number): boolean {
         if (game.runtime() - this.time >= amount) {
             this.reset()
+            return true
+        } else {
+            return false
+        }
+        
+    }
+    
+    public passedMSNoReset(amount: any): boolean {
+        if (game.runtime() - this.time >= amount) {
             return true
         } else {
             return false
@@ -219,6 +253,10 @@ function executeAction(actionID: number) {
 
 function updatePlayer() {
     let itemID: number;
+    let tempSprite: Sprite;
+    let moved: boolean;
+    let playerFrameIndex: number;
+    let close: boolean;
     let textPos: number[];
     
     // Inventory
@@ -232,15 +270,23 @@ function updatePlayer() {
             }
             
             if (controller.left.isPressed()) {
-                
-            } else if (controller.right.isPressed()) {
                 // Drop Item
+                itemID = playerInventory[inventorySlot]
+                tempSprite = sprites.create(getImage(itemID), SpriteKind.Item)
+                tempSprite.setPosition(playerOne.x, playerOne.y)
+                tempSprite.z = playerOne.z - 1
+                droppedItemsTable.push([tempSprite.toString(), "" + itemID])
+                playerInventory[inventorySlot] = 0
+            } else if (controller.right.isPressed()) {
+                // Inspect Item
+                if (notifyText == null) {
+                    sendNotify(getDescription(playerInventory[inventorySlot]))
+                }
                 
             }
             
         }
         
-        // Inspect
         inventorySlot = clamp(0, 3, inventorySlot)
         if (controller.A.isPressed()) {
             if (inventoryOpenDelay.passedMS(200)) {
@@ -260,16 +306,27 @@ function updatePlayer() {
         
     } else {
         //  START Movement
+        // playerFrameIndex = 0
+        // playerFrameOffsetIndex = 0
+        moved = false
         if (controller.up.isPressed()) {
             playerOne.y += playerSpeed * -1
+            moved = true
         } else if (controller.down.isPressed()) {
             playerOne.y += playerSpeed
+            moved = true
         }
         
         if (controller.right.isPressed()) {
             playerOne.x += playerSpeed
         } else if (controller.left.isPressed()) {
             playerOne.x += playerSpeed * -1
+        }
+        
+        if (moved) {
+            
+        } else {
+            playerFrameIndex = 0
         }
         
         //  END Movement
@@ -284,14 +341,38 @@ function updatePlayer() {
         if (controller.B.isPressed()) {
             //  Actions
             if (actionSwapDelay.passedMS(500)) {
-                actionSelectIndex += 1
-                if (actionSelectIndex >= 3) {
-                    actionSelectIndex = 0
+                if (prompter == null) {
+                    actionSelectIndex += 1
+                    if (actionSelectIndex >= 3) {
+                        actionSelectIndex = 0
+                    }
+                    
+                    playerAction.destroy()
+                    playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
+                    playerAction.setFlag(SpriteFlag.AutoDestroy, true)
+                } else {
+                    // Pick up
+                    close = false
+                    for (let dropItem of droppedItemsTable) {
+                        if (close) {
+                            break
+                        } else if (dropItem[0] == prompter.toString()) {
+                            for (let index = 0; index < 4; index++) {
+                                if (playerInventory[index] == 0) {
+                                    playerInventory[index] = parseInt(dropItem[1])
+                                    close = true
+                                    prompter.setPosition(-1000, -1000)
+                                    prompter.setFlag(SpriteFlag.AutoDestroy, true)
+                                    sprites.destroy(prompter)
+                                    break
+                                }
+                                
+                            }
+                        }
+                        
+                    }
                 }
                 
-                playerAction.destroy()
-                playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
-                playerAction.setFlag(SpriteFlag.AutoDestroy, true)
             }
             
         }
@@ -302,15 +383,58 @@ function updatePlayer() {
         playerAction.y = textPos[1] + (scene.screenHeight() - playerAction.height)
     }
     
+    // Notify Text
+    if (notifyText != null) {
+        textPos = spriteToScreen(notifyText)
+        notifyText.x = textPos[0] + (scene.screenWidth() - notifyText.width)
+        notifyText.y = textPos[1]
+        //  + (scene.screen_height() - playerAction.height)
+        if (notifyDisplayTimer.passedMS(2000)) {
+            notifyText.setPosition(-1000, -1000)
+            notifyText.destroy()
+            notifyText = null
+        }
+        
+    }
+    
 }
 
 //  This will update all nearby enemies alongside load them in and out.
 //  So we check where the player is and if an enemy should be their spawn it in if it's not done already. 
 function updateEntities() {
+    let dist: number;
+    
+    // Items update
+    if (prompter == null) {
+        for (let item of sprites.allOfKind(SpriteKind.Item)) {
+            dist = calcDistance(item.x, item.y, playerOne.x, playerOne.y)
+            if (dist >= 10) {
+                continue
+            }
+            
+            if (item.overlapsWith(playerOne)) {
+                prompter = item
+                break
+            }
+            
+        }
+    } else {
+        dist = calcDistance(prompter.x, prompter.y, playerOne.x, playerOne.y)
+        if (dist >= 10) {
+            prompter = null
+            pickupPrompt.setPosition(-1000, -1000)
+        } else {
+            pickupPrompt.setPosition(prompter.x, prompter.y - pickupPrompt.height * 2)
+        }
+        
+    }
     
 }
 
 // START of on start
+// notify
+let notifyText : TextSprite = null
+let notifyDisplayTimer = new msDelay()
 // Inventory Vars
 let inventorySprite = sprites.create(assets.image`inventoryBG`, SpriteKind.Inventory)
 let inventoryOpenDelay = new msDelay()
@@ -318,12 +442,17 @@ let inventoryInputDelay = new msDelay()
 let inventoryOpen = false
 let inventorySlot = 0
 let invSprites = [sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory)]
+// Prompt
+let prompter : Sprite = null
+let pickupPrompt = textsprite.create("Press B to pickup", 10, 15)
+pickupPrompt.setPosition(-1000, -1000)
+let droppedItemsTable = [["", "0"]]
 //  START Consts
 let maxNumItems = 4
 let actionsStrings = ["Inventory", "Attack", "Health Item"]
 // In the future add stats window
 //  END Consts
-//  Their is a minimap extension that i could use? maybe get the core game in then start adding features. This is to test the consoles limits.
+//  There is a minimap extension that i could use? maybe get the core game in then start adding features. This is to test the consoles limits.
 scene.setBackgroundColor(2)
 tiles.setCurrentTilemap(tilemap`
     level1
@@ -348,6 +477,16 @@ playerOne = sprites.create(assets.image`
 scene.cameraFollowSprite(playerOne)
 let playerAnimFrame = 1
 let playerAnimDelay = new msDelay()
+// Player animations
+let playerFrameIndex = 0
+let playerFrameOffsetIndex = 0
+let playerFrames = [assets.image`PlayerIdle`, assets.image`PlayerWalkDown1`, assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown3`, assets.image`PlayerWalkUp1`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp3`]
+// Idle
+// Down
+// Up
+// Left
+// Right
+// world
 // playerOne.x = 3000
 // playerOne.y = 3000
 // END of on start
