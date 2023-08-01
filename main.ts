@@ -2,13 +2,14 @@
 //  1. Create enemies. (Multiple types with different behaviour)
 //  2. Complete the game world.
 //  3. Add player stats attack, defense and more.
-//  4. Add player attack.
 //  Low Prio list:
 //  1. Add stats screen
 //  2. Inventory doesn't show on the console for some reason. Not sure why?
+//  3. Fix Visual bug when Inventory is rendered over a tile map wall.
 namespace SpriteKind {
     export const Item = SpriteKind.create()
     export const Inventory = SpriteKind.create()
+    export const PlayerProjectile = SpriteKind.create()
 }
 
 function useItem(itemID: number) {
@@ -35,6 +36,9 @@ function useItem(itemID: number) {
 
 //  Main instructions
 function executeAction(actionID: number) {
+    let projVel: number[];
+    let projImage: Image;
+    let playerProj: Sprite;
     let itemID2: number;
     
     if (actionID == 0) {
@@ -42,7 +46,34 @@ function executeAction(actionID: number) {
         inventoryOpen = !inventoryOpen
     } else if (actionID == 1) {
         //  Attack
-        console.log("Attack Not implemented")
+        if (playerAttackDelay.passedMS(500)) {
+            projVel = null
+            projImage = null
+            if (playerFrameOffsetIndex == 4) {
+                // UP
+                projVel = [0, -100]
+                projImage = assets.image`AttackUp1`
+            } else if (playerFrameOffsetIndex == 0) {
+                // DOWN
+                projVel = [0, 100]
+                projImage = assets.image`AttackDown1`
+            } else if (playerFrameOffsetIndex == 12) {
+                // RIGHT
+                projVel = [100, 0]
+                projImage = assets.image`AttackRight1`
+            } else if (playerFrameOffsetIndex == 8) {
+                // LEFT
+                projVel = [-100, 0]
+                projImage = assets.image`AttackLeft1`
+            }
+            
+            playerProj = sprites.create(projImage, SpriteKind.PlayerProjectile)
+            playerProj.setPosition(playerOne.x, playerOne.y)
+            playerProj.setVelocity(projVel[0], projVel[1])
+            playerProj.setFlag(SpriteFlag.AutoDestroy, true)
+            playerProj.setFlag(SpriteFlag.DestroyOnWall, true)
+        }
+        
     } else if (actionID == 2) {
         for (let x3 = 0; x3 < 4; x3++) {
             itemID2 = playerInventory[x3]
@@ -182,27 +213,30 @@ function updatePlayer() {
             moved = true
             playerFrameOffsetIndex = 4
         } else if (controller.down.isPressed()) {
+            // up
             playerOne.y += playerSpeed
             moved = true
-            playerFrameOffsetIndex = 1
+            playerFrameOffsetIndex = 0
         }
         
+        // down
         if (controller.right.isPressed()) {
             playerOne.x += playerSpeed
             moved = true
-            playerFrameOffsetIndex = 10
+            playerFrameOffsetIndex = 12
         } else if (controller.left.isPressed()) {
+            // right
             playerOne.x += playerSpeed * -1
             moved = true
-            playerFrameOffsetIndex = 7
+            playerFrameOffsetIndex = 8
         }
         
+        // left
         if (!moved) {
             playerFrameIndex = 0
-            playerFrameOffsetIndex = 0
         } else if (playerAnimDelay.passedMS(150)) {
             playerFrameIndex += 1
-            if (playerFrameIndex >= 3) {
+            if (playerFrameIndex >= 4) {
                 playerFrameIndex = 0
             }
             
@@ -326,6 +360,14 @@ function updateEntities() {
         
     }
     
+    for (let playerProj of sprites.allOfKind(SpriteKind.PlayerProjectile)) {
+        dist = calcDistance(playerOne.x, playerOne.y, playerProj.x, playerProj.y)
+        if (dist >= 60) {
+            sprites.destroy(playerProj)
+            break
+        }
+        
+    }
 }
 
 function useCondition(itemID3: number): boolean {
@@ -410,6 +452,11 @@ function onScreen() {
     }
 }
 
+// Checks whether entities should spawn or not.
+function spawnCheck() {
+    
+}
+
 //  START Items
 //  Item list:
 //  Explination: okay Classes don't work properly so i can't create OOP like item definitions so im going to use ids. (Its gonna be kinda slow)
@@ -459,7 +506,6 @@ let playerFrames : Image[] = []
 let playerOne : Sprite = null
 let actionSelectIndex = 0
 let playerAction : TextSprite = null
-let playerSpeed = 0
 let playerInventory : number[] = []
 let actionsStrings : string[] = []
 let droppedItemsTable : string[][] = []
@@ -513,42 +559,17 @@ game.stats = true
 playerInventory = [3, 1, 2, 4]
 info.setLife(3)
 let actionSwapDelay = new msDelay()
-playerSpeed = 1
+let playerSpeed = 1
 let playerLevel = 1
 let playerAttack = 1
 let playerDefense = 1
+let playerAttackDelay = new msDelay()
 playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
 playerOne = sprites.create(assets.image`
     PlayerIdle
 `, SpriteKind.Player)
 scene.cameraFollowSprite(playerOne)
-playerFrames = [assets.image`
-        PlayerIdle
-    `, assets.image`
-        PlayerWalkDown1
-    `, assets.image`
-        PlayerWalkDown2
-    `, assets.image`
-        PlayerWalkDown3
-    `, assets.image`
-        PlayerWalkUp1
-    `, assets.image`
-        PlayerWalkUp2
-    `, assets.image`
-        PlayerWalkUp3
-    `, assets.image`
-        PlayerWalkLeft1
-    `, assets.image`
-        PlayerWalkLeft2
-    `, assets.image`
-        PlayerWalkLeft3
-    `, assets.image`
-        PlayerWalkRight1
-    `, assets.image`
-        PlayerWalkRight2
-    `, assets.image`
-        PlayerWalkRight3
-    `]
+playerFrames = [assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown1`, assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown3`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp1`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp3`, assets.image`PlayerWalkLeft2`, assets.image`PlayerWalkLeft1`, assets.image`PlayerWalkLeft2`, assets.image`PlayerWalkLeft3`, assets.image`PlayerWalkRight2`, assets.image`PlayerWalkRight1`, assets.image`PlayerWalkRight2`, assets.image`PlayerWalkRight3`]
 let playerAnimDelay = new msDelay()
 //  world
 //  END of on start
@@ -557,4 +578,5 @@ offScreen()
 forever(function on_forever() {
     updatePlayer()
     updateEntities()
+    console.log("X: " + playerOne.x + " Y: " + playerOne.y)
 })

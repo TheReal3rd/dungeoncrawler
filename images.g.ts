@@ -556,6 +556,60 @@ bccccccccccccccccccccccccccccccccccc
 . . f f f f f f f f f f . . . . 
 . . . f f f . . . f f . . . . . 
 `;
+            case "image25":
+            case "AttackUp1":return img`
+. . . . d d d d d d d d d . . . 
+. . d d 1 1 1 1 1 1 1 1 1 d d . 
+. d 1 1 1 d d d d d d d 1 1 1 d 
+d 1 1 d d . . . . . . . d d d . 
+. d d . . . . . . . . . . . . . 
+`;
+            case "image26":
+            case "AttackDown1":return img`
+. . . . . . . . . . . . . d d . 
+. d d d . . . . . . . d d 1 1 d 
+d 1 1 1 d d d d d d d 1 1 1 d . 
+. d d 1 1 1 1 1 1 1 1 1 d d . . 
+. . . d d d d d d d d d . . . . 
+`;
+            case "image27":
+            case "AttackRight1":return img`
+. d . . . 
+d 1 d . . 
+d 1 1 d . 
+. d 1 d . 
+. d 1 1 d 
+. . d 1 d 
+. . d 1 d 
+. . d 1 d 
+. . d 1 d 
+. . d 1 d 
+. . d 1 d 
+. . d 1 d 
+. d 1 1 d 
+. d 1 d . 
+. d 1 d . 
+. . d . . 
+`;
+            case "image28":
+            case "AttackLeft1":return img`
+. . d . . 
+. d 1 d . 
+. d 1 d . 
+d 1 1 d . 
+d 1 d . . 
+d 1 d . . 
+d 1 d . . 
+d 1 d . . 
+d 1 d . . 
+d 1 d . . 
+d 1 d . . 
+d 1 1 d . 
+. d 1 d . 
+. d 1 1 d 
+. . d 1 d 
+. . . d . 
+`;
         }
         return null;
     })

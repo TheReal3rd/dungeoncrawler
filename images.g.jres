@@ -119,6 +119,26 @@
         "mimeType": "image/x-mkcd-f4",
         "displayName": "PlayerWalkLeft3"
     },
+    "image25": {
+        "data": "hwQQAAUAAAAA0AAAAB0NANARDQDQ0QAAHdEAAB0NAAAdDQAAHQ0AAB0NAAAdDQAAHQ0AAB0NAAAd0QAA0NEAANDRAAAADQAA",
+        "mimeType": "image/x-mkcd-f4",
+        "displayName": "AttackUp1"
+    },
+    "image26": {
+        "data": "hwQQAAUAAAAADQAA0NEAANDRAADQEQ0AAB0NAAAdDQAAHQ0AAB0NAAAdDQAAHQ0AAB0NANARDQDQ0QAAHdEAAB0NAADQAAAA",
+        "mimeType": "image/x-mkcd-f4",
+        "displayName": "AttackDown1"
+    },
+    "image27": {
+        "data": "hwQFABAAAADQDQAAAAAAAB3RDQAAAN0N0BHR3d3dEdEA3RERERHRDQAA3d3d3Q0A",
+        "mimeType": "image/x-mkcd-f4",
+        "displayName": "AttackRight1"
+    },
+    "image28": {
+        "data": "hwQFABAAAAAA0N3d3d0AANAdEREREd0AHRHd3d0dEQ3Q3QAAANAd0QAAAAAAANAN",
+        "mimeType": "image/x-mkcd-f4",
+        "displayName": "AttackLeft1"
+    },
     "*": {
         "mimeType": "image/x-mkcd-f4",
         "dataEncoding": "base64",

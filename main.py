@@ -2,15 +2,16 @@
 # 1. Create enemies. (Multiple types with different behaviour)
 # 2. Complete the game world.
 # 3. Add player stats attack, defense and more.
-# 4. Add player attack.
 # Low Prio list:
 # 1. Add stats screen
 # 2. Inventory doesn't show on the console for some reason. Not sure why?
+# 3. Fix Visual bug when Inventory is rendered over a tile map wall.
 
 @namespace
 class SpriteKind:
     Item = SpriteKind.create()
     Inventory = SpriteKind.create()
+    PlayerProjectile = SpriteKind.create()
 
 def useItem(itemID: number):
     global playerAttack, playerDefense
@@ -30,13 +31,34 @@ def useItem(itemID: number):
         pass
 # Main instructions
 def executeAction(actionID: number):
-    global inventoryOpen
+    global inventoryOpen, playerFrameOffsetIndex
     if actionID == 0:
         # Inventory
         inventoryOpen = not (inventoryOpen)
     elif actionID == 1:
         # Attack
-        print("Attack Not implemented")
+        if playerAttackDelay.passedMS(500):
+            projVel = None
+            projImage = None
+            if playerFrameOffsetIndex == 4:#UP
+                projVel = (0, -100)
+                projImage = assets.image(("""AttackUp1"""))
+            elif playerFrameOffsetIndex == 0:#DOWN
+                projVel = (0, 100)
+                projImage = assets.image(("""AttackDown1"""))
+            elif playerFrameOffsetIndex == 12:#RIGHT
+                projVel = (100, 0)
+                projImage = assets.image(("""AttackRight1"""))
+            elif playerFrameOffsetIndex == 8:#LEFT
+                projVel = (-100, 0)
+                projImage = assets.image(("""AttackLeft1"""))
+
+            playerProj = sprites.create(projImage, SpriteKind.PlayerProjectile)
+            playerProj.set_position(playerOne.x, playerOne.y)
+            playerProj.set_velocity(projVel[0], projVel[1])
+            playerProj.set_flag(SpriteFlag.AUTO_DESTROY, True)
+            playerProj.set_flag(SpriteFlag.DESTROY_ON_WALL, True)
+
     elif actionID == 2:
         for x3 in range(4):
             itemID2 = playerInventory[x3]
@@ -114,25 +136,24 @@ def updatePlayer():
         if controller.up.is_pressed():
             playerOne.y += playerSpeed * -1
             moved = True
-            playerFrameOffsetIndex = 4
+            playerFrameOffsetIndex = 4#up
         elif controller.down.is_pressed():
             playerOne.y += playerSpeed
             moved = True
-            playerFrameOffsetIndex = 1
+            playerFrameOffsetIndex = 0#down
         if controller.right.is_pressed():
             playerOne.x += playerSpeed
             moved = True
-            playerFrameOffsetIndex = 10
+            playerFrameOffsetIndex = 12#right
         elif controller.left.is_pressed():
             playerOne.x += playerSpeed * -1
             moved = True
-            playerFrameOffsetIndex = 7
+            playerFrameOffsetIndex = 8#left
         if not (moved):
             playerFrameIndex = 0
-            playerFrameOffsetIndex = 0
         elif playerAnimDelay.passedMS(150):
             playerFrameIndex += 1
-            if playerFrameIndex >= 3:
+            if playerFrameIndex >= 4:
                 playerFrameIndex = 0
         # Set frame
         playerOne.set_image(playerFrames[playerFrameIndex + playerFrameOffsetIndex])
@@ -213,6 +234,14 @@ def updateEntities():
             pickupPrompt.set_position(-1000, -1000)
         else:
             pickupPrompt.set_position(prompter.x, prompter.y - pickupPrompt.height * 2)
+
+    for playerProj in sprites.all_of_kind(SpriteKind.PlayerProjectile):
+        dist = calcDistance(playerOne.x, playerOne.y, playerProj.x, playerProj.y)
+        if dist >= 60:
+            sprites.destroy(playerProj)
+            break
+
+        
 def useCondition(itemID3: number):
     if [1, 2].index(itemID3) >= 0:
         # Health pot
@@ -276,6 +305,10 @@ def onScreen():
         invSprites[x2 + 4].y = pos[1] + yOffset
         yOffset += 18
 
+#Checks whether entities should spawn or not.
+def spawnCheck():
+    pass
+
 # START Items
 # Item list:
 # Explination: okay Classes don't work properly so i can't create OOP like item definitions so im going to use ids. (Its gonna be kinda slow)
@@ -321,7 +354,6 @@ playerFrames: List[Image] = []
 playerOne: Sprite = None
 actionSelectIndex = 0
 playerAction: TextSprite = None
-playerSpeed = 0
 playerInventory: List[number] = []
 actionsStrings: List[str] = []
 droppedItemsTable: List[List[str]] = []
@@ -390,50 +422,29 @@ playerSpeed = 1
 playerLevel = 1
 playerAttack = 1
 playerDefense = 1
+playerAttackDelay = msDelay()
 playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
 playerOne = sprites.create(assets.image("""
     PlayerIdle
 """), SpriteKind.player)
 scene.camera_follow_sprite(playerOne)
-playerFrames = [assets.image("""
-        PlayerIdle
-    """),
-    assets.image("""
-        PlayerWalkDown1
-    """),
-    assets.image("""
-        PlayerWalkDown2
-    """),
-    assets.image("""
-        PlayerWalkDown3
-    """),
-    assets.image("""
-        PlayerWalkUp1
-    """),
-    assets.image("""
-        PlayerWalkUp2
-    """),
-    assets.image("""
-        PlayerWalkUp3
-    """),
-    assets.image("""
-        PlayerWalkLeft1
-    """),
-    assets.image("""
-        PlayerWalkLeft2
-    """),
-    assets.image("""
-        PlayerWalkLeft3
-    """),
-    assets.image("""
-        PlayerWalkRight1
-    """),
-    assets.image("""
-        PlayerWalkRight2
-    """),
-    assets.image("""
-        PlayerWalkRight3
-    """)]
+playerFrames = [
+    assets.image("""PlayerWalkDown2"""),
+    assets.image("""PlayerWalkDown1"""),
+    assets.image("""PlayerWalkDown2"""),
+    assets.image("""PlayerWalkDown3"""),
+    assets.image("""PlayerWalkUp2"""),
+    assets.image("""PlayerWalkUp1"""),
+    assets.image("""PlayerWalkUp2"""),
+    assets.image("""PlayerWalkUp3"""),
+    assets.image("""PlayerWalkLeft2"""),
+    assets.image("""PlayerWalkLeft1"""),
+    assets.image("""PlayerWalkLeft2"""),
+    assets.image("""PlayerWalkLeft3"""),
+    assets.image("""PlayerWalkRight2"""),
+    assets.image("""PlayerWalkRight1"""),
+    assets.image("""PlayerWalkRight2"""),
+    assets.image("""PlayerWalkRight3""")]
 playerAnimDelay = msDelay()
 # world
 # END of on start
@@ -443,4 +454,5 @@ offScreen()
 def on_forever():
     updatePlayer()
     updateEntities()
+    print("X: "+playerOne.x+" Y: "+playerOne.y)
 forever(on_forever)
