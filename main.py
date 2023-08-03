@@ -7,6 +7,30 @@
 # 2. Inventory doesn't show on the console for some reason. Not sure why?
 # 3. Fix Visual bug when Inventory is rendered over a tile map wall.
 
+class EnemySpawnData():
+    pos = (0,0)
+    rangeOffset = 0
+    trigDist = 0
+    enemiesList = []
+
+    def __init__(pos, rangeOffset, trigDist, enemiesList):
+        self.pos = pos
+        self.rangeOffset = rangeOffset
+        self.trigDist = trigDist
+        self.enemiesList = enemiesList
+
+    def getPos(self):
+        return self.pos
+
+    def getOffset(self):
+        return self.rangeOffset
+
+    def getTrigDist(self):
+        return self.trigDist
+
+    def getEnemiesList(self):
+        return self.enemiesList
+
 @namespace
 class SpriteKind:
     Item = SpriteKind.create()
@@ -136,19 +160,19 @@ def updatePlayer():
         if controller.up.is_pressed():
             playerOne.y += playerSpeed * -1
             moved = True
-            playerFrameOffsetIndex = 4#up
+            playerFrameOffsetIndex = 4#UP
         elif controller.down.is_pressed():
             playerOne.y += playerSpeed
             moved = True
-            playerFrameOffsetIndex = 0#down
+            playerFrameOffsetIndex = 0#DOWN
         if controller.right.is_pressed():
             playerOne.x += playerSpeed
             moved = True
-            playerFrameOffsetIndex = 12#right
+            playerFrameOffsetIndex = 12#RIGHT
         elif controller.left.is_pressed():
             playerOne.x += playerSpeed * -1
             moved = True
-            playerFrameOffsetIndex = 8#left
+            playerFrameOffsetIndex = 8#LEFT
         if not (moved):
             playerFrameIndex = 0
         elif playerAnimDelay.passedMS(150):
@@ -447,10 +471,13 @@ playerFrames = [
     assets.image("""PlayerWalkRight3""")]
 playerAnimDelay = msDelay()
 # world
+enemySpawnData = [EnemySpawnData((557, 278), 50, 50, [])]##TODO before this should create the enemy logic first.
+
 # END of on start
 # game.debug = True
-offScreen()
 
+
+offScreen()
 def on_forever():
     updatePlayer()
     updateEntities()

@@ -6,6 +6,85 @@
 //  1. Add stats screen
 //  2. Inventory doesn't show on the console for some reason. Not sure why?
 //  3. Fix Visual bug when Inventory is rendered over a tile map wall.
+class EnemySpawnData {
+    static pos: number[]
+    private ___pos_is_set: boolean
+    private ___pos: number[]
+    get pos(): number[] {
+        return this.___pos_is_set ? this.___pos : EnemySpawnData.pos
+    }
+    set pos(value: number[]) {
+        this.___pos_is_set = true
+        this.___pos = value
+    }
+    
+    static rangeOffset: number
+    private ___rangeOffset_is_set: boolean
+    private ___rangeOffset: number
+    get rangeOffset(): number {
+        return this.___rangeOffset_is_set ? this.___rangeOffset : EnemySpawnData.rangeOffset
+    }
+    set rangeOffset(value: number) {
+        this.___rangeOffset_is_set = true
+        this.___rangeOffset = value
+    }
+    
+    static trigDist: number
+    private ___trigDist_is_set: boolean
+    private ___trigDist: number
+    get trigDist(): number {
+        return this.___trigDist_is_set ? this.___trigDist : EnemySpawnData.trigDist
+    }
+    set trigDist(value: number) {
+        this.___trigDist_is_set = true
+        this.___trigDist = value
+    }
+    
+    static enemiesList: any[]
+    private ___enemiesList_is_set: boolean
+    private ___enemiesList: any[]
+    get enemiesList(): any[] {
+        return this.___enemiesList_is_set ? this.___enemiesList : EnemySpawnData.enemiesList
+    }
+    set enemiesList(value: any[]) {
+        this.___enemiesList_is_set = true
+        this.___enemiesList = value
+    }
+    
+    public static __initEnemySpawnData() {
+        EnemySpawnData.pos = [0, 0]
+        EnemySpawnData.rangeOffset = 0
+        EnemySpawnData.trigDist = 0
+        EnemySpawnData.enemiesList = []
+    }
+    
+    constructor(pos: number[], rangeOffset: number, trigDist: number, enemiesList: any[]) {
+        this.pos = pos
+        this.rangeOffset = rangeOffset
+        this.trigDist = trigDist
+        this.enemiesList = enemiesList
+    }
+    
+    public getPos(): number[] {
+        return this.pos
+    }
+    
+    public getOffset(): number {
+        return this.rangeOffset
+    }
+    
+    public getTrigDist(): number {
+        return this.trigDist
+    }
+    
+    public getEnemiesList(): any[] {
+        return this.enemiesList
+    }
+    
+}
+
+EnemySpawnData.__initEnemySpawnData()
+
 namespace SpriteKind {
     export const Item = SpriteKind.create()
     export const Inventory = SpriteKind.create()
@@ -213,25 +292,25 @@ function updatePlayer() {
             moved = true
             playerFrameOffsetIndex = 4
         } else if (controller.down.isPressed()) {
-            // up
+            // UP
             playerOne.y += playerSpeed
             moved = true
             playerFrameOffsetIndex = 0
         }
         
-        // down
+        // DOWN
         if (controller.right.isPressed()) {
             playerOne.x += playerSpeed
             moved = true
             playerFrameOffsetIndex = 12
         } else if (controller.left.isPressed()) {
-            // right
+            // RIGHT
             playerOne.x += playerSpeed * -1
             moved = true
             playerFrameOffsetIndex = 8
         }
         
-        // left
+        // LEFT
         if (!moved) {
             playerFrameIndex = 0
         } else if (playerAnimDelay.passedMS(150)) {
@@ -572,6 +651,8 @@ scene.cameraFollowSprite(playerOne)
 playerFrames = [assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown1`, assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown3`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp1`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp3`, assets.image`PlayerWalkLeft2`, assets.image`PlayerWalkLeft1`, assets.image`PlayerWalkLeft2`, assets.image`PlayerWalkLeft3`, assets.image`PlayerWalkRight2`, assets.image`PlayerWalkRight1`, assets.image`PlayerWalkRight2`, assets.image`PlayerWalkRight3`]
 let playerAnimDelay = new msDelay()
 //  world
+let enemySpawnData = [new EnemySpawnData([557, 278], 50, 50, [])]
+// #TODO before this should create the enemy logic first.
 //  END of on start
 //  game.debug = True
 offScreen()
