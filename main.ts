@@ -1,11 +1,75 @@
 //  TODO list:
 //  1. Create enemies. (Multiple types with different behaviour)
-//  2. Complete the game world.
+//  2. Complete the game world. -> Create Levels.
 //  3. Add player stats attack, defense and more.
 //  Low Prio list:
 //  1. Add stats screen
 //  2. Inventory doesn't show on the console for some reason. Not sure why?
 //  3. Fix Visual bug when Inventory is rendered over a tile map wall.
+//  4. Tidy up vars area.
+class LvlDoorData {
+    static pos: number[]
+    private ___pos_is_set: boolean
+    private ___pos: number[]
+    get pos(): number[] {
+        return this.___pos_is_set ? this.___pos : LvlDoorData.pos
+    }
+    set pos(value: number[]) {
+        this.___pos_is_set = true
+        this.___pos = value
+    }
+    
+    static lvlID: number
+    private ___lvlID_is_set: boolean
+    private ___lvlID: number
+    get lvlID(): number {
+        return this.___lvlID_is_set ? this.___lvlID : LvlDoorData.lvlID
+    }
+    set lvlID(value: number) {
+        this.___lvlID_is_set = true
+        this.___lvlID = value
+    }
+    
+    static playerPos: number[]
+    private ___playerPos_is_set: boolean
+    private ___playerPos: number[]
+    get playerPos(): number[] {
+        return this.___playerPos_is_set ? this.___playerPos : LvlDoorData.playerPos
+    }
+    set playerPos(value: number[]) {
+        this.___playerPos_is_set = true
+        this.___playerPos = value
+    }
+    
+    public static __initLvlDoorData() {
+        LvlDoorData.pos = [0, 0]
+        LvlDoorData.lvlID = 0
+        // Some reason i can't set it to -1 just errors out. ¬_¬
+        LvlDoorData.playerPos = [0, 0]
+    }
+    
+    constructor(pos: number[], lvlID: number, playerPos: number[]) {
+        this.pos = pos
+        this.lvlID = lvlID
+        this.playerPos = playerPos
+    }
+    
+    public getPos(): number[] {
+        return this.pos
+    }
+    
+    public getLvlID(): number {
+        return this.lvlID
+    }
+    
+    public getPlayerPos(): number[] {
+        return this.playerPos
+    }
+    
+}
+
+LvlDoorData.__initLvlDoorData()
+
 class EnemySpawnData {
     static pos: number[]
     private ___pos_is_set: boolean
@@ -170,8 +234,6 @@ function executeAction(actionID: number) {
     
 }
 
-//  END Inventory
-//  START Utils
 class msDelay {
     static time: number
     private ___time_is_set: boolean
@@ -218,19 +280,6 @@ class msDelay {
 }
 
 msDelay.__initmsDelay()
-
-//  Clamp reduce number within a set range.
-function clamp(minNum: number, maxNum: number, value: number): number {
-    if (value < minNum) {
-        return minNum
-    }
-    
-    if (value > maxNum) {
-        return maxNum
-    }
-    
-    return value
-}
 
 function updatePlayer() {
     let itemID22: number;
@@ -392,21 +441,129 @@ function updatePlayer() {
     
 }
 
-//  Position sprite within game window by calculating the screen size and tile map size.
-function spriteToScreen(textSprite: Sprite): number[] {
-    //  X_range = 80
-    //  Y_range = 60
-    //  tile_size = 16
-    //  map_size = ? (200)
-    //  tile_size * map_size - (X_range or Y_range)
-    //  So no real point making it dynamic as you can't.
-    return [clamp(80, 3120, playerOne.x) - (scene.screenWidth() - textSprite.width) / 2, clamp(60, 3140, playerOne.y) - (scene.screenHeight() - textSprite.height) / 2]
+// ## Inventory START 
+function useCondition(itemID3: number): boolean {
+    if ([1, 2].indexOf(itemID3) >= 0) {
+        //  Health pot
+        return info.life() != 5
+    }
+    
+    if ([3, 4].indexOf(itemID3) >= 0) {
+        return true
+    } else {
+        //  None
+        return false
+    }
+    
 }
 
+function getDescription(itemID4: number): string {
+    if (itemID4 == 1) {
+        //  Health pot
+        return "HP potion heals you."
+    } else if (itemID4 == 2) {
+        //  Burger
+        return "Burger heals you."
+    } else if (itemID4 == 3) {
+        return "Improve your attack."
+    } else if (itemID4 == 4) {
+        return "Improve your defense."
+    } else {
+        //  None
+        return "Empty slot."
+    }
+    
+}
+
+//  Item list:
+//  Explination: okay Classes don't work properly so i can't create OOP like item definitions so im going to use ids. (Its gonna be kinda slow)
+//  0 = None
+//  1 = HealthPotion
+//  2 = Burger
+//  3 = Iron_Sword
+//  4 = Wooden_Shield
+//  5 = Iron_Armour_Set (TODO)
+function getImage(itemID5: number): Image {
+    if (itemID5 == 1) {
+        //  Health pot
+        return assets.image`
+            HealthItem
+        `
+    } else if (itemID5 == 2) {
+        //  Burger
+        return assets.image`
+            BurgerItem
+        `
+    } else if (itemID5 == 3) {
+        return assets.image`
+            SwordItem
+        `
+    } else if (itemID5 == 4) {
+        return assets.image`
+            ShieldItem
+        `
+    } else {
+        //  None
+        return assets.image`
+            EmptyItem
+        `
+    }
+    
+}
+
+// ## Inventory END 
+// ## GUI START 
+// Sends a notification to the top right of the screen.
 function sendNotify(text: string) {
     
     notifyText = textsprite.create(text, 10, 15)
     notifyDisplayTimer.reset()
+}
+
+//  Move all Inventory elements offScreen.
+function offScreen() {
+    inventorySprite.setPosition(-1000, -1000)
+    for (let x = 0; x < 8; x++) {
+        invSprites[x].setPosition(-1000, -1000)
+    }
+}
+
+//  Move all Inventory elements onScreen and into correct positions alongside update their image.
+function onScreen() {
+    
+    pos = spriteToScreen(inventorySprite)
+    inventorySprite.x = pos[0]
+    inventorySprite.y = pos[1]
+    yOffset = 23
+    for (let x2 = 0; x2 < 4; x2++) {
+        pos = spriteToScreen(invSprites[x2])
+        invSprites[x2].x = pos[0] + (scene.screenWidth() - invSprites[x2].width)
+        invSprites[x2].y = pos[1] + yOffset
+        invSprites[x2].z = 200
+        invSprites[x2 + 4].z = 210
+        if (inventorySlot == x2) {
+            invSprites[x2].setImage(assets.image`
+                inventoryButtonLit
+            `)
+        } else {
+            invSprites[x2].setImage(assets.image`
+                inventoryButton0
+            `)
+        }
+        
+        invSprites[x2 + 4].setImage(getImage(playerInventory[x2]))
+        pos = spriteToScreen(invSprites[x2 + 4])
+        invSprites[x2 + 4].x = pos[0] + (scene.screenWidth() - invSprites[x2 + 4].width)
+        invSprites[x2 + 4].y = pos[1] + yOffset
+        yOffset += 18
+    }
+}
+
+// ## GUI END
+// ## Enemies Funcs START
+// Checks whether entities should spawn or not.
+function spawnCheck() {
+    
 }
 
 //  This will update all nearby enemies alongside load them in and out.
@@ -449,134 +606,92 @@ function updateEntities() {
     }
 }
 
-function useCondition(itemID3: number): boolean {
-    if ([1, 2].indexOf(itemID3) >= 0) {
-        //  Health pot
-        return info.life() != 5
+// ## Enemies Funcs END
+// ## Level Functions START
+function setLevel() {
+    // Set the current level to the levelID
+    let lvl = null
+    if (levelID == 0) {
+        lvl = tilemap`Lv0_Intro`
+    } else if (levelID == 1) {
+        lvl = tilemap`Lv1_Dun1`
     }
     
-    if ([3, 4].indexOf(itemID3) >= 0) {
-        return true
+    tiles.setCurrentTilemap(lvl)
+}
+
+function getLevelDoorData(): LvlDoorData[] {
+    let pos: number[];
+    if (levelID == 0) {
+        pos = [48, 32]
+        return [new LvlDoorData([38, 24], 1, pos), new LvlDoorData([39, 24], 1, pos), new LvlDoorData([40, 24], 1, pos), new LvlDoorData([41, 24], 1, pos), new LvlDoorData([42, 24], 1, pos), new LvlDoorData([42, 23], 1, pos), new LvlDoorData([42, 22], 1, pos), new LvlDoorData([42, 21], 1, pos), new LvlDoorData([42, 20], 1, pos)]
+    } else if (levelID == 1) {
+        // # BAD but it'll work. Change in the future. (Slow)
+        return []
     } else {
-        //  None
-        return false
+        return null
     }
     
+}
+
+function updateLevel() {
+    let tilePos: number[];
+    let newPos: number[];
+    
+    let pos = [Math.trunc(playerOne.x / 16), Math.trunc(playerOne.y / 16)]
+    for (let x of getLevelDoorData()) {
+        tilePos = x.getPos()
+        if (tilePos[0] == pos[0] && tilePos[1] == pos[1]) {
+            newPos = x.getPlayerPos()
+            playerOne.x = newPos[0]
+            playerOne.y = newPos[1]
+            levelID = x.getLvlID()
+            setLevel()
+        }
+        
+    }
+}
+
+// ## Level Functions END
+// ## Maths Funcs start
+//  Clamp reduce number within a set range.
+function clamp(minNum: number, maxNum: number, value: number): number {
+    if (value < minNum) {
+        return minNum
+    }
+    
+    if (value > maxNum) {
+        return maxNum
+    }
+    
+    return value
 }
 
 //  Calculate the pixel distance from one position to another.
 function calcDistance(posX1: number, posY1: number, posX2: number, posY2: number): number {
-    
-    xDiff = posX1 - posX2
-    yDiff = posY1 - posY2
+    let xDiff = posX1 - posX2
+    let yDiff = posY1 - posY2
     return Math.sqrt(xDiff * xDiff + yDiff * yDiff)
 }
 
-function getDescription(itemID4: number): string {
-    if (itemID4 == 1) {
-        //  Health pot
-        return "HP potion heals you."
-    } else if (itemID4 == 2) {
-        //  Burger
-        return "Burger heals you."
-    } else if (itemID4 == 3) {
-        return "Improve your attack."
-    } else if (itemID4 == 4) {
-        return "Improve your defense."
-    } else {
-        //  None
-        return "Empty slot."
-    }
-    
+//  Position sprite within game window by calculating the screen size and tile map size.
+function spriteToScreen(textSprite: Sprite): number[] {
+    //  X_range = 80
+    //  Y_range = 60
+    //  tile_size = 16
+    //  map_size = ? (200)
+    //  tile_size * map_size - (X_range or Y_range)
+    //  So no real point making it dynamic as you can't. (So i made it dynamic. :D)
+    return [clamp(80, 16 * levelSizes[levelID] - 80, playerOne.x) - (scene.screenWidth() - textSprite.width) / 2, clamp(60, 16 * levelSizes[levelID] - 60, playerOne.y) - (scene.screenHeight() - textSprite.height) / 2]
 }
 
-//  END Items
-//  START Inventory
-//  Move all Inventory elements offScreen.
-function offScreen() {
-    inventorySprite.setPosition(-1000, -1000)
-    for (let x = 0; x < 8; x++) {
-        invSprites[x].setPosition(-1000, -1000)
-    }
-}
-
-//  Move all Inventory elements onScreen and into correct positions alongside update their image.
-function onScreen() {
-    
-    pos = spriteToScreen(inventorySprite)
-    inventorySprite.x = pos[0]
-    inventorySprite.y = pos[1]
-    yOffset = 23
-    for (let x2 = 0; x2 < 4; x2++) {
-        pos = spriteToScreen(invSprites[x2])
-        invSprites[x2].x = pos[0] + (scene.screenWidth() - invSprites[x2].width)
-        invSprites[x2].y = pos[1] + yOffset
-        invSprites[x2].z = 200
-        invSprites[x2 + 4].z = 210
-        if (inventorySlot == x2) {
-            invSprites[x2].setImage(assets.image`
-                inventoryButtonLit
-            `)
-        } else {
-            invSprites[x2].setImage(assets.image`
-                inventoryButton0
-            `)
-        }
-        
-        invSprites[x2 + 4].setImage(getImage(playerInventory[x2]))
-        pos = spriteToScreen(invSprites[x2 + 4])
-        invSprites[x2 + 4].x = pos[0] + (scene.screenWidth() - invSprites[x2 + 4].width)
-        invSprites[x2 + 4].y = pos[1] + yOffset
-        yOffset += 18
-    }
-}
-
-// Checks whether entities should spawn or not.
-function spawnCheck() {
-    
-}
-
-//  START Items
-//  Item list:
-//  Explination: okay Classes don't work properly so i can't create OOP like item definitions so im going to use ids. (Its gonna be kinda slow)
-//  0 = None
-//  1 = HealthPotion
-//  2 = Burger
-//  3 = Iron_Sword
-//  4 = Wooden_Shield
-//  5 = Iron_Armour_Set (TODO)
-function getImage(itemID5: number): Image {
-    if (itemID5 == 1) {
-        //  Health pot
-        return assets.image`
-            HealthItem
-        `
-    } else if (itemID5 == 2) {
-        //  Burger
-        return assets.image`
-            BurgerItem
-        `
-    } else if (itemID5 == 3) {
-        return assets.image`
-            SwordItem
-        `
-    } else if (itemID5 == 4) {
-        return assets.image`
-            ShieldItem
-        `
-    } else {
-        //  None
-        return assets.image`
-            EmptyItem
-        `
-    }
-    
-}
-
+// ## Maths Funcs END
+// Level info START
+let levelSizes = [50, 26]
+let levelID = 0
+// Level info END
 let yOffset = 0
 let pos : number[] = []
-let yDiff = 0
-let xDiff = 0
 let playerFrameIndex = 0
 let playerFrameOffsetIndex = 0
 let inventorySlot = 0
@@ -630,9 +745,6 @@ actionsStrings = ["Inventory", "Attack", "Health Item"]
 //  END Consts
 //  There is a minimap extension that i could use? maybe get the core game in then start adding features. This is to test the consoles limits.
 scene.setBackgroundColor(2)
-tiles.setCurrentTilemap(tilemap`
-    level1
-`)
 game.stats = true
 //  This not working ill use ids instead. Inheritance might be broken or something.
 playerInventory = [3, 1, 2, 4]
@@ -651,13 +763,16 @@ scene.cameraFollowSprite(playerOne)
 playerFrames = [assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown1`, assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown3`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp1`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp3`, assets.image`PlayerWalkLeft2`, assets.image`PlayerWalkLeft1`, assets.image`PlayerWalkLeft2`, assets.image`PlayerWalkLeft3`, assets.image`PlayerWalkRight2`, assets.image`PlayerWalkRight1`, assets.image`PlayerWalkRight2`, assets.image`PlayerWalkRight3`]
 let playerAnimDelay = new msDelay()
 //  world
+let enemyList = []
 let enemySpawnData = [new EnemySpawnData([557, 278], 50, 50, [])]
 // #TODO before this should create the enemy logic first.
 //  END of on start
 //  game.debug = True
+setLevel()
 offScreen()
 forever(function on_forever() {
     updatePlayer()
     updateEntities()
-    console.log("X: " + playerOne.x + " Y: " + playerOne.y)
+    updateLevel()
+    console.log("X: " + playerOne.x + " Y: " + playerOne.y + " Grid[X: " + Math.trunc(playerOne.x / 16) + " Y: " + Math.trunc(playerOne.y / 16) + "]")
 })

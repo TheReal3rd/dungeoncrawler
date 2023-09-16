@@ -1,11 +1,31 @@
 # TODO list:
 # 1. Create enemies. (Multiple types with different behaviour)
-# 2. Complete the game world.
+# 2. Complete the game world. -> Create Levels.
 # 3. Add player stats attack, defense and more.
 # Low Prio list:
 # 1. Add stats screen
 # 2. Inventory doesn't show on the console for some reason. Not sure why?
 # 3. Fix Visual bug when Inventory is rendered over a tile map wall.
+# 4. Tidy up vars area.
+
+class LvlDoorData():
+    pos = (0, 0)
+    lvlID = 0#Some reason i can't set it to -1 just errors out. ¬_¬
+    playerPos = (0, 0)
+
+    def __init__(pos, lvlID, playerPos):
+        self.pos = pos
+        self.lvlID = lvlID
+        self.playerPos = playerPos
+
+    def getPos(self):
+        return self.pos
+
+    def getLvlID(self):
+        return self.lvlID
+
+    def getPlayerPos(self):
+        return self.playerPos
 
 class EnemySpawnData():
     pos = (0,0)
@@ -91,8 +111,7 @@ def executeAction(actionID: number):
                     useItem(itemID2)
                     playerInventory[x3] = 0
                     break
-# END Inventory
-# START Utils
+
 class msDelay():#This breaks blocks. and its annoying.
     time = 0
 
@@ -114,13 +133,6 @@ class msDelay():#This breaks blocks. and its annoying.
         else:
             return False
 
-# Clamp reduce number within a set range.
-def clamp(minNum: number, maxNum: number, value: number):
-    if value < minNum:
-        return minNum
-    if value > maxNum:
-        return maxNum
-    return value
 def updatePlayer():
     global inventorySlot, inventoryOpen, playerFrameOffsetIndex, playerFrameIndex, actionSelectIndex, playerAction, notifyText
     # Inventory
@@ -224,48 +236,9 @@ def updatePlayer():
             notifyText.set_position(-1000, -1000)
             notifyText.destroy()
             notifyText = None
-# Position sprite within game window by calculating the screen size and tile map size.
-def spriteToScreen(textSprite: Sprite):
-    # X_range = 80
-    # Y_range = 60
-    # tile_size = 16
-    # map_size = ? (200)
-    # tile_size * map_size - (X_range or Y_range)
-    # So no real point making it dynamic as you can't.
-    return [clamp(80, 3120, playerOne.x) - (scene.screen_width() - textSprite.width) / 2,
-        clamp(60, 3140, playerOne.y) - (scene.screen_height() - textSprite.height) / 2]
-def sendNotify(text: str):
-    global notifyText
-    notifyText = textsprite.create(text, 10, 15)
-    notifyDisplayTimer.reset()
-# This will update all nearby enemies alongside load them in and out.
-# So we check where the player is and if an enemy should be their spawn it in if it's not done already.
-def updateEntities():
-    global prompter
-    # Items update
-    if prompter == None:
-        for item in sprites.all_of_kind(SpriteKind.Item):
-            dist = calcDistance(item.x, item.y, playerOne.x, playerOne.y)
-            if dist >= 10:
-                continue
-            if item.overlaps_with(playerOne):
-                prompter = item
-                break
-    else:
-        dist = calcDistance(prompter.x, prompter.y, playerOne.x, playerOne.y)
-        if dist >= 10:
-            prompter = None
-            pickupPrompt.set_position(-1000, -1000)
-        else:
-            pickupPrompt.set_position(prompter.x, prompter.y - pickupPrompt.height * 2)
 
-    for playerProj in sprites.all_of_kind(SpriteKind.PlayerProjectile):
-        dist = calcDistance(playerOne.x, playerOne.y, playerProj.x, playerProj.y)
-        if dist >= 60:
-            sprites.destroy(playerProj)
-            break
 
-        
+### Inventory START 
 def useCondition(itemID3: number):
     if [1, 2].index(itemID3) >= 0:
         # Health pot
@@ -275,12 +248,6 @@ def useCondition(itemID3: number):
     else:
         # None
         return False
-# Calculate the pixel distance from one position to another.
-def calcDistance(posX1: number, posY1: number, posX2: number, posY2: number):
-    global xDiff, yDiff
-    xDiff = posX1 - posX2
-    yDiff = posY1 - posY2
-    return Math.sqrt(xDiff * xDiff + yDiff * yDiff)
 def getDescription(itemID4: number):
     if itemID4 == 1:
         # Health pot
@@ -295,45 +262,7 @@ def getDescription(itemID4: number):
     else:
         # None
         return "Empty slot."
-# END Items
-# START Inventory
-# Move all Inventory elements offScreen.
-def offScreen():
-    inventorySprite.set_position(-1000, -1000)
-    for x in range(8):
-        invSprites[x].set_position(-1000, -1000)
-# Move all Inventory elements onScreen and into correct positions alongside update their image.
-def onScreen():
-    global pos, yOffset
-    pos = spriteToScreen(inventorySprite)
-    inventorySprite.x = pos[0]
-    inventorySprite.y = pos[1]
-    yOffset = 23
-    for x2 in range(4):
-        pos = spriteToScreen(invSprites[x2])
-        invSprites[x2].x = pos[0] + (scene.screen_width() - invSprites[x2].width)
-        invSprites[x2].y = pos[1] + yOffset
-        invSprites[x2].z = 200
-        invSprites[x2 + 4].z = 210
-        if inventorySlot == x2:
-            invSprites[x2].set_image(assets.image("""
-                inventoryButtonLit
-            """))
-        else:
-            invSprites[x2].set_image(assets.image("""
-                inventoryButton0
-            """))
-        invSprites[x2 + 4].set_image(getImage(playerInventory[x2]))
-        pos = spriteToScreen(invSprites[x2 + 4])
-        invSprites[x2 + 4].x = pos[0] + (scene.screen_width() - invSprites[x2 + 4].width)
-        invSprites[x2 + 4].y = pos[1] + yOffset
-        yOffset += 18
 
-#Checks whether entities should spawn or not.
-def spawnCheck():
-    pass
-
-# START Items
 # Item list:
 # Explination: okay Classes don't work properly so i can't create OOP like item definitions so im going to use ids. (Its gonna be kinda slow)
 # 0 = None
@@ -366,10 +295,163 @@ def getImage(itemID5: number):
         return assets.image("""
             EmptyItem
         """)
+### Inventory END 
+
+
+
+### GUI START 
+#Sends a notification to the top right of the screen.
+def sendNotify(text: str):
+    global notifyText
+    notifyText = textsprite.create(text, 10, 15)
+    notifyDisplayTimer.reset()
+# Move all Inventory elements offScreen.
+def offScreen():
+    inventorySprite.set_position(-1000, -1000)
+    for x in range(8):
+        invSprites[x].set_position(-1000, -1000)
+# Move all Inventory elements onScreen and into correct positions alongside update their image.
+def onScreen():
+    global pos, yOffset
+    pos = spriteToScreen(inventorySprite)
+    inventorySprite.x = pos[0]
+    inventorySprite.y = pos[1]
+    yOffset = 23
+    for x2 in range(4):
+        pos = spriteToScreen(invSprites[x2])
+        invSprites[x2].x = pos[0] + (scene.screen_width() - invSprites[x2].width)
+        invSprites[x2].y = pos[1] + yOffset
+        invSprites[x2].z = 200
+        invSprites[x2 + 4].z = 210
+        if inventorySlot == x2:
+            invSprites[x2].set_image(assets.image("""
+                inventoryButtonLit
+            """))
+        else:
+            invSprites[x2].set_image(assets.image("""
+                inventoryButton0
+            """))
+        invSprites[x2 + 4].set_image(getImage(playerInventory[x2]))
+        pos = spriteToScreen(invSprites[x2 + 4])
+        invSprites[x2 + 4].x = pos[0] + (scene.screen_width() - invSprites[x2 + 4].width)
+        invSprites[x2 + 4].y = pos[1] + yOffset
+        yOffset += 18
+
+### GUI END
+
+
+
+### Enemies Funcs START
+#Checks whether entities should spawn or not.
+def spawnCheck():
+    pass
+# This will update all nearby enemies alongside load them in and out.
+# So we check where the player is and if an enemy should be their spawn it in if it's not done already.
+def updateEntities():
+    global prompter
+    # Items update
+    if prompter == None:
+        for item in sprites.all_of_kind(SpriteKind.Item):
+            dist = calcDistance(item.x, item.y, playerOne.x, playerOne.y)
+            if dist >= 10:
+                continue
+            if item.overlaps_with(playerOne):
+                prompter = item
+                break
+    else:
+        dist = calcDistance(prompter.x, prompter.y, playerOne.x, playerOne.y)
+        if dist >= 10:
+            prompter = None
+            pickupPrompt.set_position(-1000, -1000)
+        else:
+            pickupPrompt.set_position(prompter.x, prompter.y - pickupPrompt.height * 2)
+
+    for playerProj in sprites.all_of_kind(SpriteKind.PlayerProjectile):
+        dist = calcDistance(playerOne.x, playerOne.y, playerProj.x, playerProj.y)
+        if dist >= 60:
+            sprites.destroy(playerProj)
+            break
+### Enemies Funcs END
+
+
+
+### Level Functions START
+def setLevel():#Set the current level to the levelID
+    lvl = None
+    if levelID == 0:
+        lvl = tilemap("""Lv0_Intro""")
+    elif levelID == 1:
+        lvl = tilemap("""Lv1_Dun1""")
+    tiles.set_current_tilemap(lvl)
+
+def getLevelDoorData():
+    if levelID == 0:
+        pos = (48,32)
+        return [## BAD but it'll work. Change in the future. (Slow)
+            LvlDoorData((38,24), 1, pos),
+            LvlDoorData((39,24), 1, pos),
+            LvlDoorData((40,24), 1, pos),
+            LvlDoorData((41,24), 1, pos),
+            LvlDoorData((42,24), 1, pos),
+            LvlDoorData((42,23), 1, pos),
+            LvlDoorData((42,22), 1, pos),
+            LvlDoorData((42,21), 1, pos),
+            LvlDoorData((42,20), 1, pos),
+        ]
+    elif levelID == 1:
+        return []
+    else:
+        return None
+
+def updateLevel():
+    global levelID, playerOne
+    pos = (int(playerOne.x / 16), int(playerOne.y / 16))
+    for x in getLevelDoorData():
+        tilePos = x.getPos()
+        if tilePos[0] == pos[0] and tilePos[1] == pos[1]:
+            newPos = x.getPlayerPos()
+            playerOne.x = newPos[0]
+            playerOne.y = newPos[1]
+            levelID = x.getLvlID()
+            setLevel()
+
+
+### Level Functions END
+
+
+
+### Maths Funcs start
+# Clamp reduce number within a set range.
+def clamp(minNum: number, maxNum: number, value: number):
+    if value < minNum:
+        return minNum
+    if value > maxNum:
+        return maxNum
+    return value
+# Calculate the pixel distance from one position to another.
+def calcDistance(posX1: number, posY1: number, posX2: number, posY2: number):
+    xDiff = posX1 - posX2
+    yDiff = posY1 - posY2
+    return Math.sqrt(xDiff * xDiff + yDiff * yDiff)
+# Position sprite within game window by calculating the screen size and tile map size.
+def spriteToScreen(textSprite: Sprite):
+    # X_range = 80
+    # Y_range = 60
+    # tile_size = 16
+    # map_size = ? (200)
+    # tile_size * map_size - (X_range or Y_range)
+    # So no real point making it dynamic as you can't. (So i made it dynamic. :D)
+    return [clamp(80, (16 * levelSizes[levelID]) - 80 , playerOne.x) - (scene.screen_width() - textSprite.width) / 2,
+        clamp(60, (16 * levelSizes[levelID]) - 60, playerOne.y) - (scene.screen_height() - textSprite.height) / 2]
+### Maths Funcs END
+
+#Level info START
+levelSizes = [ 50, 26 ]
+levelID = 0
+#Level info END
+
 yOffset = 0
 pos: List[number] = []
-yDiff = 0
-xDiff = 0
 playerFrameIndex = 0
 playerFrameOffsetIndex = 0
 inventorySlot = 0
@@ -434,9 +516,6 @@ actionsStrings = ["Inventory", "Attack", "Health Item"]
 # END Consts
 # There is a minimap extension that i could use? maybe get the core game in then start adding features. This is to test the consoles limits.
 scene.set_background_color(2)
-tiles.set_current_tilemap(tilemap("""
-    level1
-"""))
 game.stats = True
 # This not working ill use ids instead. Inheritance might be broken or something.
 playerInventory = [3, 1, 2, 4]
@@ -471,15 +550,17 @@ playerFrames = [
     assets.image("""PlayerWalkRight3""")]
 playerAnimDelay = msDelay()
 # world
+enemyList = []
 enemySpawnData = [EnemySpawnData((557, 278), 50, 50, [])]##TODO before this should create the enemy logic first.
 
 # END of on start
 # game.debug = True
 
-
+setLevel()
 offScreen()
 def on_forever():
     updatePlayer()
     updateEntities()
-    print("X: "+playerOne.x+" Y: "+playerOne.y)
+    updateLevel()
+    print("X: "+playerOne.x+" Y: "+playerOne.y + " Grid[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
 forever(on_forever)
