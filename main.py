@@ -8,6 +8,7 @@
 # 3. Fix Visual bug when Inventory is rendered over a tile map wall.
 # 4. Tidy up vars area.
 
+#Holds Level Door Data that can be iterated through.
 class LvlDoorData():
     pos = (0, 0)
     lvlID = 0#Some reason i can't set it to -1 just errors out. ¬_¬
@@ -27,23 +28,19 @@ class LvlDoorData():
     def getPlayerPos(self):
         return self.playerPos
 
-class EnemySpawnData():
+#Holds Levels Spawn Point data that then uses EnemySpawn Data.
+class EnemySpawnPointData():
     pos = (0,0)
-    rangeOffset = 0
     trigDist = 0
     enemiesList = []
 
-    def __init__(pos, rangeOffset, trigDist, enemiesList):
+    def __init__(pos, trigDist, enemiesList):
         self.pos = pos
-        self.rangeOffset = rangeOffset
         self.trigDist = trigDist
         self.enemiesList = enemiesList
 
     def getPos(self):
         return self.pos
-
-    def getOffset(self):
-        return self.rangeOffset
 
     def getTrigDist(self):
         return self.trigDist
@@ -465,7 +462,23 @@ yOffset = 0
 playerFrameIndex = 0
 playerFrameOffsetIndex = 0
 pos: List[number] = []
-playerFrames: List[Image] = []
+playerFrames = [
+    assets.image("""PlayerWalkDown2"""),
+    assets.image("""PlayerWalkDown1"""),
+    assets.image("""PlayerWalkDown2"""),
+    assets.image("""PlayerWalkDown3"""),
+    assets.image("""PlayerWalkUp2"""),
+    assets.image("""PlayerWalkUp1"""),
+    assets.image("""PlayerWalkUp2"""),
+    assets.image("""PlayerWalkUp3"""),
+    assets.image("""PlayerWalkLeft2"""),
+    assets.image("""PlayerWalkLeft1"""),
+    assets.image("""PlayerWalkLeft2"""),
+    assets.image("""PlayerWalkLeft3"""),
+    assets.image("""PlayerWalkRight2"""),
+    assets.image("""PlayerWalkRight1"""),
+    assets.image("""PlayerWalkRight2"""),
+    assets.image("""PlayerWalkRight3""")]
 #Draw vars END
 
 
@@ -543,5 +556,5 @@ def on_forever():
     updatePlayer()
     updateEntities()
     updateLevel()
-    print("X: "+playerOne.x+" Y: "+playerOne.y + " Grid[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
+    print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
 forever(on_forever)

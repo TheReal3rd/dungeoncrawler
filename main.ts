@@ -7,6 +7,7 @@
 //  2. Inventory doesn't show on the console for some reason. Not sure why?
 //  3. Fix Visual bug when Inventory is rendered over a tile map wall.
 //  4. Tidy up vars area.
+// Holds Level Door Data that can be iterated through.
 class LvlDoorData {
     static pos: number[]
     private ___pos_is_set: boolean
@@ -70,34 +71,24 @@ class LvlDoorData {
 
 LvlDoorData.__initLvlDoorData()
 
-class EnemySpawnData {
+// Holds Levels Spawn Point data that then uses EnemySpawn Data.
+class EnemySpawnPointData {
     static pos: number[]
     private ___pos_is_set: boolean
     private ___pos: number[]
     get pos(): number[] {
-        return this.___pos_is_set ? this.___pos : EnemySpawnData.pos
+        return this.___pos_is_set ? this.___pos : EnemySpawnPointData.pos
     }
     set pos(value: number[]) {
         this.___pos_is_set = true
         this.___pos = value
     }
     
-    static rangeOffset: number
-    private ___rangeOffset_is_set: boolean
-    private ___rangeOffset: number
-    get rangeOffset(): number {
-        return this.___rangeOffset_is_set ? this.___rangeOffset : EnemySpawnData.rangeOffset
-    }
-    set rangeOffset(value: number) {
-        this.___rangeOffset_is_set = true
-        this.___rangeOffset = value
-    }
-    
     static trigDist: number
     private ___trigDist_is_set: boolean
     private ___trigDist: number
     get trigDist(): number {
-        return this.___trigDist_is_set ? this.___trigDist : EnemySpawnData.trigDist
+        return this.___trigDist_is_set ? this.___trigDist : EnemySpawnPointData.trigDist
     }
     set trigDist(value: number) {
         this.___trigDist_is_set = true
@@ -108,33 +99,27 @@ class EnemySpawnData {
     private ___enemiesList_is_set: boolean
     private ___enemiesList: any[]
     get enemiesList(): any[] {
-        return this.___enemiesList_is_set ? this.___enemiesList : EnemySpawnData.enemiesList
+        return this.___enemiesList_is_set ? this.___enemiesList : EnemySpawnPointData.enemiesList
     }
     set enemiesList(value: any[]) {
         this.___enemiesList_is_set = true
         this.___enemiesList = value
     }
     
-    public static __initEnemySpawnData() {
-        EnemySpawnData.pos = [0, 0]
-        EnemySpawnData.rangeOffset = 0
-        EnemySpawnData.trigDist = 0
-        EnemySpawnData.enemiesList = []
+    public static __initEnemySpawnPointData() {
+        EnemySpawnPointData.pos = [0, 0]
+        EnemySpawnPointData.trigDist = 0
+        EnemySpawnPointData.enemiesList = []
     }
     
-    constructor(pos: number[], rangeOffset: number, trigDist: number, enemiesList: any[]) {
+    constructor(pos: number[], trigDist: number, enemiesList: any[]) {
         this.pos = pos
-        this.rangeOffset = rangeOffset
         this.trigDist = trigDist
         this.enemiesList = enemiesList
     }
     
     public getPos(): number[] {
         return this.pos
-    }
-    
-    public getOffset(): number {
-        return this.rangeOffset
     }
     
     public getTrigDist(): number {
@@ -147,7 +132,7 @@ class EnemySpawnData {
     
 }
 
-EnemySpawnData.__initEnemySpawnData()
+EnemySpawnPointData.__initEnemySpawnPointData()
 
 namespace SpriteKind {
     export const Item = SpriteKind.create()
@@ -704,7 +689,7 @@ let yOffset = 0
 let playerFrameIndex = 0
 let playerFrameOffsetIndex = 0
 let pos : number[] = []
-let playerFrames : Image[] = []
+let playerFrames = [assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown1`, assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown3`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp1`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp3`, assets.image`PlayerWalkLeft2`, assets.image`PlayerWalkLeft1`, assets.image`PlayerWalkLeft2`, assets.image`PlayerWalkLeft3`, assets.image`PlayerWalkRight2`, assets.image`PlayerWalkRight1`, assets.image`PlayerWalkRight2`, assets.image`PlayerWalkRight3`]
 // Draw vars END
 // Inventory START
 let inventorySlot = 0
@@ -752,5 +737,5 @@ forever(function on_forever() {
     updatePlayer()
     updateEntities()
     updateLevel()
-    console.log("X: " + playerOne.x + " Y: " + playerOne.y + " Grid[X: " + Math.trunc(playerOne.x / 16) + " Y: " + Math.trunc(playerOne.y / 16) + "]")
+    console.log("X: " + playerOne.x + " Y: " + playerOne.y + " TileMap[X: " + Math.trunc(playerOne.x / 16) + " Y: " + Math.trunc(playerOne.y / 16) + "]")
 })
