@@ -1,6 +1,6 @@
 //  TODO list:
 //  1. Create enemies. (Multiple types with different behaviour)
-//  2. Complete the game world. -> Create Levels.
+//  2. Create Levels. -> TODO create more levels then.
 //  3. Add player stats attack, defense and more.
 //  Low Prio list:
 //  1. Add stats screen
@@ -171,8 +171,6 @@ function useItem(itemID: number) {
     } else if (itemID == 4) {
         //  Shield
         playerDefense += 1
-    } else {
-        
     }
     
 }
@@ -626,7 +624,16 @@ function getLevelDoorData(): LvlDoorData[] {
         pos = [48, 32]
         return [new LvlDoorData([38, 24], 1, pos), new LvlDoorData([39, 24], 1, pos), new LvlDoorData([40, 24], 1, pos), new LvlDoorData([41, 24], 1, pos), new LvlDoorData([42, 24], 1, pos), new LvlDoorData([42, 23], 1, pos), new LvlDoorData([42, 22], 1, pos), new LvlDoorData([42, 21], 1, pos), new LvlDoorData([42, 20], 1, pos)]
     } else if (levelID == 1) {
-        // # BAD but it'll work. Change in the future. (Slow)
+        return [new LvlDoorData([3, 0], 0, [640, 352])]
+    } else {
+        return null
+    }
+    
+}
+
+function getLevelEnemyData(): any[] {
+    // #Level 1 will have no enemies.
+    if (levelID == 1) {
         return []
     } else {
         return null
@@ -689,85 +696,56 @@ function spriteToScreen(textSprite: Sprite): number[] {
 // Level info START
 let levelSizes = [50, 26]
 let levelID = 0
+let enemyList = []
+let droppedItemsTable = [["", "0"]]
 // Level info END
+// Draw vars START
 let yOffset = 0
-let pos : number[] = []
 let playerFrameIndex = 0
 let playerFrameOffsetIndex = 0
+let pos : number[] = []
+let playerFrames : Image[] = []
+// Draw vars END
+// Inventory START
 let inventorySlot = 0
 let inventoryOpen = false
-let playerFrames : Image[] = []
-let playerOne : Sprite = null
-let actionSelectIndex = 0
-let playerAction : TextSprite = null
-let playerInventory : number[] = []
-let actionsStrings : string[] = []
-let droppedItemsTable : string[][] = []
-let pickupPrompt : TextSprite = null
-let invSprites : Sprite[] = []
-let inventorySprite : Sprite = null
-//  Prompt
-let prompter : Sprite = null
-//  START of on start
-//  notify
-let notifyText : TextSprite = null
-let notifyDisplayTimer = new msDelay()
-//  Inventory Vars
-inventorySprite = sprites.create(assets.image`
-    inventoryBG
-`, SpriteKind.Inventory)
 let inventoryOpenDelay = new msDelay()
 let inventoryInputDelay = new msDelay()
-invSprites = [sprites.create(assets.image`
-            inventoryButton0
-        `, SpriteKind.Inventory), sprites.create(assets.image`
-            inventoryButton0
-        `, SpriteKind.Inventory), sprites.create(assets.image`
-            inventoryButton0
-        `, SpriteKind.Inventory), sprites.create(assets.image`
-            inventoryButton0
-        `, SpriteKind.Inventory), sprites.create(assets.image`
-        EmptyItem
-    `, SpriteKind.Inventory), sprites.create(assets.image`
-        EmptyItem
-    `, SpriteKind.Inventory), sprites.create(assets.image`
-        EmptyItem
-    `, SpriteKind.Inventory), sprites.create(assets.image`
-        EmptyItem
-    `, SpriteKind.Inventory)]
-pickupPrompt = textsprite.create("Press B to pickup", 10, 15)
-pickupPrompt.setPosition(-1000, -1000)
-droppedItemsTable = [["", "0"]]
-//  START Consts
-let maxNumItems = 4
-actionsStrings = ["Inventory", "Attack", "Health Item"]
-//  In the future add stats window
-//  END Consts
-//  There is a minimap extension that i could use? maybe get the core game in then start adding features. This is to test the consoles limits.
-scene.setBackgroundColor(2)
-game.stats = true
-//  This not working ill use ids instead. Inheritance might be broken or something.
-playerInventory = [3, 1, 2, 4]
-info.setLife(3)
+let playerInventory = [3, 1, 2, 4]
+// Inventory END
+//  Action START
+let actionSelectIndex = 0
+let actionsStrings = ["Inventory", "Attack", "Health Item"]
 let actionSwapDelay = new msDelay()
+//  Action END
+//  Sprites START
+let playerOne = sprites.create(assets.image` PlayerIdle`, SpriteKind.Player)
+let playerAction : TextSprite = null
+let prompter : Sprite = null
+let notifyText : TextSprite = null
+let inventorySprite = sprites.create(assets.image`inventoryBG`, SpriteKind.Inventory)
+let invSprites = [sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`inventoryButton0`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory), sprites.create(assets.image`EmptyItem`, SpriteKind.Inventory)]
+let pickupPrompt = textsprite.create("Press B to pickup", 10, 15)
+playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
+//  Sprites END
+// Notify Vars START
+let notifyDisplayTimer = new msDelay()
+// Notify Vars END
+//  Player Stats START
 let playerSpeed = 1
 let playerLevel = 1
 let playerAttack = 1
 let playerDefense = 1
 let playerAttackDelay = new msDelay()
-playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
-playerOne = sprites.create(assets.image`
-    PlayerIdle
-`, SpriteKind.Player)
-scene.cameraFollowSprite(playerOne)
-playerFrames = [assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown1`, assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown3`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp1`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp3`, assets.image`PlayerWalkLeft2`, assets.image`PlayerWalkLeft1`, assets.image`PlayerWalkLeft2`, assets.image`PlayerWalkLeft3`, assets.image`PlayerWalkRight2`, assets.image`PlayerWalkRight1`, assets.image`PlayerWalkRight2`, assets.image`PlayerWalkRight3`]
 let playerAnimDelay = new msDelay()
-//  world
-let enemyList = []
-let enemySpawnData = [new EnemySpawnData([557, 278], 50, 50, [])]
-// #TODO before this should create the enemy logic first.
-//  END of on start
-//  game.debug = True
+//  Player Stats END
+//  Vars MUL START
+pickupPrompt.setPosition(-1000, -1000)
+scene.setBackgroundColor(2)
+game.stats = true
+info.setLife(3)
+scene.cameraFollowSprite(playerOne)
+//  Vars MUL END
 setLevel()
 offScreen()
 forever(function on_forever() {

@@ -1,6 +1,6 @@
 # TODO list:
 # 1. Create enemies. (Multiple types with different behaviour)
-# 2. Complete the game world. -> Create Levels.
+# 2. Create Levels. -> TODO create more levels then.
 # 3. Add player stats attack, defense and more.
 # Low Prio list:
 # 1. Add stats screen
@@ -60,19 +60,15 @@ class SpriteKind:
 def useItem(itemID: number):
     global playerAttack, playerDefense
     # None
-    if [1, 2].index(itemID) >= 0:
-        # Health pot and burger
+    if [1, 2].index(itemID) >= 0:# Health pot and burger
         info.change_life_by(2)
         if info.life() >= 6:
             info.set_life(5)
-    elif itemID == 3:
-        # Sword
+    elif itemID == 3:# Sword
         playerAttack += 1
-    elif itemID == 4:
-        # Shield
+    elif itemID == 4:# Shield
         playerDefense += 1
-    else:
-        pass
+
 # Main instructions
 def executeAction(actionID: number):
     global inventoryOpen, playerFrameOffsetIndex
@@ -387,7 +383,7 @@ def setLevel():#Set the current level to the levelID
 def getLevelDoorData():
     if levelID == 0:
         pos = (48,32)
-        return [## BAD but it'll work. Change in the future. (Slow)
+        return [
             LvlDoorData((38,24), 1, pos),
             LvlDoorData((39,24), 1, pos),
             LvlDoorData((40,24), 1, pos),
@@ -399,6 +395,15 @@ def getLevelDoorData():
             LvlDoorData((42,20), 1, pos),
         ]
     elif levelID == 1:
+        return [
+            LvlDoorData((3, 0), 0, (640, 352))
+        ]
+    else:
+        return None
+
+def getLevelEnemyData():
+    ##Level 1 will have no enemies.
+    if levelID == 1:
         return []
     else:
         return None
@@ -414,7 +419,6 @@ def updateLevel():
             playerOne.y = newPos[1]
             levelID = x.getLvlID()
             setLevel()
-
 
 ### Level Functions END
 
@@ -445,116 +449,93 @@ def spriteToScreen(textSprite: Sprite):
         clamp(60, (16 * levelSizes[levelID]) - 60, playerOne.y) - (scene.screen_height() - textSprite.height) / 2]
 ### Maths Funcs END
 
+
+
 #Level info START
 levelSizes = [ 50, 26 ]
 levelID = 0
+enemyList = []
+droppedItemsTable = [["", "0"]]
 #Level info END
 
+
+
+#Draw vars START
 yOffset = 0
-pos: List[number] = []
 playerFrameIndex = 0
 playerFrameOffsetIndex = 0
+pos: List[number] = []
+playerFrames: List[Image] = []
+#Draw vars END
+
+
+
+#Inventory START
 inventorySlot = 0
 inventoryOpen = False
-playerFrames: List[Image] = []
-playerOne: Sprite = None
-actionSelectIndex = 0
-playerAction: TextSprite = None
-playerInventory: List[number] = []
-actionsStrings: List[str] = []
-droppedItemsTable: List[List[str]] = []
-pickupPrompt: TextSprite = None
-invSprites: List[Sprite] = []
-inventorySprite: Sprite = None
-# Prompt
-prompter: Sprite = None
-# START of on start
-# notify
-notifyText: TextSprite = None
-notifyDisplayTimer = msDelay()
-# Inventory Vars
-inventorySprite = sprites.create(assets.image("""
-    inventoryBG
-"""), SpriteKind.Inventory)
 inventoryOpenDelay = msDelay()
 inventoryInputDelay = msDelay()
-invSprites = [sprites.create(assets.image("""
-            inventoryButton0
-        """),
-        SpriteKind.Inventory),
-    sprites.create(assets.image("""
-            inventoryButton0
-        """),
-        SpriteKind.Inventory),
-    sprites.create(assets.image("""
-            inventoryButton0
-        """),
-        SpriteKind.Inventory),
-    sprites.create(assets.image("""
-            inventoryButton0
-        """),
-        SpriteKind.Inventory),
-    sprites.create(assets.image("""
-        EmptyItem
-    """), SpriteKind.Inventory),
-    sprites.create(assets.image("""
-        EmptyItem
-    """), SpriteKind.Inventory),
-    sprites.create(assets.image("""
-        EmptyItem
-    """), SpriteKind.Inventory),
-    sprites.create(assets.image("""
-        EmptyItem
-    """), SpriteKind.Inventory)]
-pickupPrompt = textsprite.create("Press B to pickup", 10, 15)
-pickupPrompt.set_position(-1000, -1000)
-droppedItemsTable = [["", "0"]]
-# START Consts
-maxNumItems = 4
-actionsStrings = ["Inventory", "Attack", "Health Item"]
-# In the future add stats window
-# END Consts
-# There is a minimap extension that i could use? maybe get the core game in then start adding features. This is to test the consoles limits.
-scene.set_background_color(2)
-game.stats = True
-# This not working ill use ids instead. Inheritance might be broken or something.
 playerInventory = [3, 1, 2, 4]
-info.set_life(3)
+#Inventory END
+
+
+
+# Action START
+actionSelectIndex = 0
+actionsStrings = ["Inventory", "Attack", "Health Item"]
 actionSwapDelay = msDelay()
+# Action END
+
+
+
+# Sprites START
+playerOne = sprites.create(assets.image(""" PlayerIdle"""), SpriteKind.player)
+playerAction: TextSprite = None
+prompter: Sprite = None
+notifyText: TextSprite = None
+inventorySprite = sprites.create(assets.image("""inventoryBG"""), SpriteKind.Inventory)
+invSprites = [
+    sprites.create(assets.image("""inventoryButton0"""),SpriteKind.Inventory),
+    sprites.create(assets.image("""inventoryButton0"""),SpriteKind.Inventory),
+    sprites.create(assets.image("""inventoryButton0"""),SpriteKind.Inventory),
+    sprites.create(assets.image("""inventoryButton0"""),SpriteKind.Inventory),
+    sprites.create(assets.image("""EmptyItem"""), SpriteKind.Inventory),
+    sprites.create(assets.image("""EmptyItem"""), SpriteKind.Inventory),
+    sprites.create(assets.image("""EmptyItem"""), SpriteKind.Inventory),
+    sprites.create(assets.image("""EmptyItem"""), SpriteKind.Inventory)
+]
+pickupPrompt = textsprite.create("Press B to pickup", 10, 15)
+playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
+# Sprites END
+
+
+
+#Notify Vars START
+notifyDisplayTimer = msDelay()
+#Notify Vars END
+
+
+
+# Player Stats START
 playerSpeed = 1
 playerLevel = 1
 playerAttack = 1
 playerDefense = 1
 playerAttackDelay = msDelay()
-playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
-playerOne = sprites.create(assets.image("""
-    PlayerIdle
-"""), SpriteKind.player)
-scene.camera_follow_sprite(playerOne)
-playerFrames = [
-    assets.image("""PlayerWalkDown2"""),
-    assets.image("""PlayerWalkDown1"""),
-    assets.image("""PlayerWalkDown2"""),
-    assets.image("""PlayerWalkDown3"""),
-    assets.image("""PlayerWalkUp2"""),
-    assets.image("""PlayerWalkUp1"""),
-    assets.image("""PlayerWalkUp2"""),
-    assets.image("""PlayerWalkUp3"""),
-    assets.image("""PlayerWalkLeft2"""),
-    assets.image("""PlayerWalkLeft1"""),
-    assets.image("""PlayerWalkLeft2"""),
-    assets.image("""PlayerWalkLeft3"""),
-    assets.image("""PlayerWalkRight2"""),
-    assets.image("""PlayerWalkRight1"""),
-    assets.image("""PlayerWalkRight2"""),
-    assets.image("""PlayerWalkRight3""")]
 playerAnimDelay = msDelay()
-# world
-enemyList = []
-enemySpawnData = [EnemySpawnData((557, 278), 50, 50, [])]##TODO before this should create the enemy logic first.
+# Player Stats END
 
-# END of on start
-# game.debug = True
+
+
+# Vars MUL START
+pickupPrompt.set_position(-1000, -1000)
+scene.set_background_color(2)
+game.stats = True
+info.set_life(3)
+scene.camera_follow_sprite(playerOne)
+# Vars MUL END
+
+
 
 setLevel()
 offScreen()
