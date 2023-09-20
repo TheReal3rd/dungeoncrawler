@@ -1,12 +1,11 @@
 //  TODO list:
-//  1. Create enemies. (Multiple types with different behaviour)
+//  1. Create enemies. (Multiple types with different behaviour) (Spawn logic done tracking not done.)
 //  2. Create Levels. -> TODO create more levels then.
 //  3. Add player stats attack, defense and more.
 //  Low Prio list:
 //  1. Add stats screen
 //  2. Inventory doesn't show on the console for some reason. Not sure why?
 //  3. Fix Visual bug when Inventory is rendered over a tile map wall.
-//  4. Tidy up vars area.
 // Holds Level Door Data that can be iterated through.
 class LvlDoorData {
     static pos: number[]
@@ -133,6 +132,79 @@ class EnemySpawnPointData {
 }
 
 EnemySpawnPointData.__initEnemySpawnPointData()
+
+// Movement maybe an A* like movement system? however we have very little processing? So may not work well.
+// Maybe a split processing approach?
+// 
+//  Check whether entity needs to move if so move it. then end the loop and store the index of the current ent.
+//  After the game loop has finished we move to the next entity 
+//  Bascially looping through one entity at a time but not looping through all the ent during on game update.
+// 
+class EnemyEntityObject {
+    static entSprite: Sprite
+    private ___entSprite_is_set: boolean
+    private ___entSprite: Sprite
+    get entSprite(): Sprite {
+        return this.___entSprite_is_set ? this.___entSprite : EnemyEntityObject.entSprite
+    }
+    set entSprite(value: Sprite) {
+        this.___entSprite_is_set = true
+        this.___entSprite = value
+    }
+    
+    static pos: number[]
+    private ___pos_is_set: boolean
+    private ___pos: number[]
+    get pos(): number[] {
+        return this.___pos_is_set ? this.___pos : EnemyEntityObject.pos
+    }
+    set pos(value: number[]) {
+        this.___pos_is_set = true
+        this.___pos = value
+    }
+    
+    static waypoint: any[]
+    private ___waypoint_is_set: boolean
+    private ___waypoint: any[]
+    get waypoint(): any[] {
+        return this.___waypoint_is_set ? this.___waypoint : EnemyEntityObject.waypoint
+    }
+    set waypoint(value: any[]) {
+        this.___waypoint_is_set = true
+        this.___waypoint = value
+    }
+    
+    public static __initEnemyEntityObject() {
+        EnemyEntityObject.pos = [0, 0]
+        // Current position
+        EnemyEntityObject.waypoint = [-1, -1]
+        // Waypoint Where its moving too.
+        EnemyEntityObject.entSprite = null
+    }
+    
+    constructor(entSprite: Sprite) {
+        this.entSprite = entSprite
+    }
+    
+    public setPos(pos: number[]) {
+        this.pos = pos
+    }
+    
+    public getPos(): number[] {
+        return this.pos
+    }
+    
+    public update() {
+        
+    }
+    
+    public getSprite(): Sprite {
+        return this.entSprite
+    }
+    
+}
+
+EnemyEntityObject.__initEnemyEntityObject()
 
 namespace SpriteKind {
     export const Item = SpriteKind.create()
@@ -351,6 +423,7 @@ function updatePlayer() {
                 playerFrameIndex = 0
             }
             
+            console.log("X: " + playerOne.x + " Y: " + playerOne.y + " TileMap[X: " + Math.trunc(playerOne.x / 16) + " Y: " + Math.trunc(playerOne.y / 16) + "]")
         }
         
         //  Set frame
@@ -609,19 +682,19 @@ function getLevelDoorData(): LvlDoorData[] {
         pos = [48, 32]
         return [new LvlDoorData([38, 24], 1, pos), new LvlDoorData([39, 24], 1, pos), new LvlDoorData([40, 24], 1, pos), new LvlDoorData([41, 24], 1, pos), new LvlDoorData([42, 24], 1, pos), new LvlDoorData([42, 23], 1, pos), new LvlDoorData([42, 22], 1, pos), new LvlDoorData([42, 21], 1, pos), new LvlDoorData([42, 20], 1, pos)]
     } else if (levelID == 1) {
-        return [new LvlDoorData([3, 0], 0, [640, 352])]
+        return [new LvlDoorData([3, 0], 0, [640, 352]), new LvlDoorData([25, 3], 0, [640, 352])]
     } else {
-        return null
+        return []
     }
     
 }
 
-function getLevelEnemyData(): any[] {
-    // #Level 1 will have no enemies.
+function getLevelEnemyData(): EnemySpawnPointData[] {
+    // #Level 1 (0) will have no enemies.
     if (levelID == 1) {
-        return []
+        return [new EnemySpawnPointData([5, 12], 6, [])]
     } else {
-        return null
+        return []
     }
     
 }
@@ -629,6 +702,7 @@ function getLevelEnemyData(): any[] {
 function updateLevel() {
     let tilePos: number[];
     let newPos: number[];
+    let distance: number;
     
     let pos = [Math.trunc(playerOne.x / 16), Math.trunc(playerOne.y / 16)]
     for (let x of getLevelDoorData()) {
@@ -639,6 +713,14 @@ function updateLevel() {
             playerOne.y = newPos[1]
             levelID = x.getLvlID()
             setLevel()
+        }
+        
+    }
+    for (let z of getLevelEnemyData()) {
+        tilePos = z.getPos()
+        distance = calcDistance(pos[0], pos[1], tilePos[0], tilePos[1])
+        if (distance <= z.getTrigDist()) {
+            
         }
         
     }
@@ -687,7 +769,7 @@ let droppedItemsTable = [["", "0"]]
 // Draw vars START
 let yOffset = 0
 let playerFrameIndex = 0
-let playerFrameOffsetIndex = 0
+let playerFrameOffsetIndex = 12
 let pos : number[] = []
 let playerFrames = [assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown1`, assets.image`PlayerWalkDown2`, assets.image`PlayerWalkDown3`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp1`, assets.image`PlayerWalkUp2`, assets.image`PlayerWalkUp3`, assets.image`PlayerWalkLeft2`, assets.image`PlayerWalkLeft1`, assets.image`PlayerWalkLeft2`, assets.image`PlayerWalkLeft3`, assets.image`PlayerWalkRight2`, assets.image`PlayerWalkRight1`, assets.image`PlayerWalkRight2`, assets.image`PlayerWalkRight3`]
 // Draw vars END
@@ -704,7 +786,7 @@ let actionsStrings = ["Inventory", "Attack", "Health Item"]
 let actionSwapDelay = new msDelay()
 //  Action END
 //  Sprites START
-let playerOne = sprites.create(assets.image` PlayerIdle`, SpriteKind.Player)
+let playerOne = sprites.create(assets.image`PlayerWalkRight2`, SpriteKind.Player)
 let playerAction : TextSprite = null
 let prompter : Sprite = null
 let notifyText : TextSprite = null
@@ -730,12 +812,40 @@ scene.setBackgroundColor(2)
 game.stats = true
 info.setLife(3)
 scene.cameraFollowSprite(playerOne)
+playerOne.setPosition(0, 261)
 //  Vars MUL END
+//  Intro Vars and Funcs START
+let introComplete = false
+function updateIntro() {
+    // 21
+    
+    if (playerAnimDelay.passedMS(150)) {
+        playerFrameIndex += 1
+        if (playerFrameIndex >= 4) {
+            playerFrameIndex = 0
+        }
+        
+    }
+    
+    playerOne.setImage(playerFrames[playerFrameIndex + playerFrameOffsetIndex])
+    if (playerOne.x != 21) {
+        playerOne.x += 1
+    } else {
+        introComplete = true
+    }
+    
+}
+
+//  Intro Vars and Funcs END
 setLevel()
 offScreen()
 forever(function on_forever() {
-    updatePlayer()
-    updateEntities()
-    updateLevel()
-    console.log("X: " + playerOne.x + " Y: " + playerOne.y + " TileMap[X: " + Math.trunc(playerOne.x / 16) + " Y: " + Math.trunc(playerOne.y / 16) + "]")
+    if (introComplete == false) {
+        updateIntro()
+    } else {
+        updatePlayer()
+        updateEntities()
+        updateLevel()
+    }
+    
 })

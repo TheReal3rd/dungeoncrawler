@@ -1,12 +1,11 @@
 # TODO list:
-# 1. Create enemies. (Multiple types with different behaviour)
+# 1. Create enemies. (Multiple types with different behaviour) (Spawn logic done tracking not done.)
 # 2. Create Levels. -> TODO create more levels then.
 # 3. Add player stats attack, defense and more.
 # Low Prio list:
 # 1. Add stats screen
 # 2. Inventory doesn't show on the console for some reason. Not sure why?
 # 3. Fix Visual bug when Inventory is rendered over a tile map wall.
-# 4. Tidy up vars area.
 
 #Holds Level Door Data that can be iterated through.
 class LvlDoorData():
@@ -47,6 +46,34 @@ class EnemySpawnPointData():
 
     def getEnemiesList(self):
         return self.enemiesList
+
+#Movement maybe an A* like movement system? however we have very little processing? So may not work well.
+#Maybe a split processing approach?
+#
+# Check whether entity needs to move if so move it. then end the loop and store the index of the current ent.
+# After the game loop has finished we move to the next entity 
+# Bascially looping through one entity at a time but not looping through all the ent during on game update.
+#
+class EnemyEntityObject():
+    pos = (0,0)#Current position
+    waypoint = (-1, -1)#Waypoint Where its moving too.
+    entSprite = None
+
+    def __init__(entSprite: Sprite):
+        self.entSprite = entSprite
+
+    def setPos(self, pos):
+        self.pos = pos
+
+    def getPos(self):
+        return self.pos
+
+    def update(self):
+        pass
+
+    def getSprite(self):
+        return self.entSprite
+
 
 @namespace
 class SpriteKind:
@@ -184,6 +211,7 @@ def updatePlayer():
             playerFrameIndex += 1
             if playerFrameIndex >= 4:
                 playerFrameIndex = 0
+            print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
         # Set frame
         playerOne.set_image(playerFrames[playerFrameIndex + playerFrameOffsetIndex])
         # END Movement
@@ -393,17 +421,20 @@ def getLevelDoorData():
         ]
     elif levelID == 1:
         return [
-            LvlDoorData((3, 0), 0, (640, 352))
+            LvlDoorData((3, 0), 0, (640, 352)),
+            LvlDoorData((25,3), 0, (640, 352))
         ]
     else:
-        return None
+        return []
 
 def getLevelEnemyData():
-    ##Level 1 will have no enemies.
+    ##Level 1 (0) will have no enemies.
     if levelID == 1:
-        return []
+        return [
+            EnemySpawnPointData((5,12), 6, [])
+        ]
     else:
-        return None
+        return []
 
 def updateLevel():
     global levelID, playerOne
@@ -416,6 +447,12 @@ def updateLevel():
             playerOne.y = newPos[1]
             levelID = x.getLvlID()
             setLevel()
+
+    for z in getLevelEnemyData():
+        tilePos = z.getPos()
+        distance = calcDistance(pos[0], pos[1], tilePos[0], tilePos[1])
+        if distance <= z.getTrigDist():
+            pass
 
 ### Level Functions END
 
@@ -460,7 +497,7 @@ droppedItemsTable = [["", "0"]]
 #Draw vars START
 yOffset = 0
 playerFrameIndex = 0
-playerFrameOffsetIndex = 0
+playerFrameOffsetIndex = 12
 pos: List[number] = []
 playerFrames = [
     assets.image("""PlayerWalkDown2"""),
@@ -502,7 +539,7 @@ actionSwapDelay = msDelay()
 
 
 # Sprites START
-playerOne = sprites.create(assets.image(""" PlayerIdle"""), SpriteKind.player)
+playerOne = sprites.create(assets.image("""PlayerWalkRight2"""), SpriteKind.player)
 playerAction: TextSprite = None
 prompter: Sprite = None
 notifyText: TextSprite = None
@@ -546,15 +583,39 @@ scene.set_background_color(2)
 game.stats = True
 info.set_life(3)
 scene.camera_follow_sprite(playerOne)
+playerOne.setPosition(0, 261)
 # Vars MUL END
+
+
+
+# Intro Vars and Funcs START
+introComplete = False
+
+def updateIntro():#21
+    global introComplete, playerFrameIndex, playerAnimDelay, playerOne
+    if playerAnimDelay.passedMS(150):
+        playerFrameIndex += 1
+        if playerFrameIndex >= 4:
+            playerFrameIndex = 0
+
+    playerOne.set_image(playerFrames[playerFrameIndex + playerFrameOffsetIndex])
+
+    if playerOne.x != 21:
+        playerOne.x += 1
+    else:
+        introComplete = True
+
+# Intro Vars and Funcs END
 
 
 
 setLevel()
 offScreen()
 def on_forever():
-    updatePlayer()
-    updateEntities()
-    updateLevel()
-    print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
+    if introComplete == False:
+        updateIntro();
+    else:
+        updatePlayer()
+        updateEntities()
+        updateLevel()
 forever(on_forever)
