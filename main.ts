@@ -141,17 +141,6 @@ EnemySpawnPointData.__initEnemySpawnPointData()
 //  Bascially looping through one entity at a time but not looping through all the ent during on game update.
 // 
 class EnemyEntityObject {
-    static entSprite: Sprite
-    private ___entSprite_is_set: boolean
-    private ___entSprite: Sprite
-    get entSprite(): Sprite {
-        return this.___entSprite_is_set ? this.___entSprite : EnemyEntityObject.entSprite
-    }
-    set entSprite(value: Sprite) {
-        this.___entSprite_is_set = true
-        this.___entSprite = value
-    }
-    
     static pos: number[]
     private ___pos_is_set: boolean
     private ___pos: number[]
@@ -163,15 +152,37 @@ class EnemyEntityObject {
         this.___pos = value
     }
     
-    static waypoint: any[]
+    static entSprite: Sprite
+    private ___entSprite_is_set: boolean
+    private ___entSprite: Sprite
+    get entSprite(): Sprite {
+        return this.___entSprite_is_set ? this.___entSprite : EnemyEntityObject.entSprite
+    }
+    set entSprite(value: Sprite) {
+        this.___entSprite_is_set = true
+        this.___entSprite = value
+    }
+    
+    static waypoint: number[]
     private ___waypoint_is_set: boolean
-    private ___waypoint: any[]
-    get waypoint(): any[] {
+    private ___waypoint: number[]
+    get waypoint(): number[] {
         return this.___waypoint_is_set ? this.___waypoint : EnemyEntityObject.waypoint
     }
-    set waypoint(value: any[]) {
+    set waypoint(value: number[]) {
         this.___waypoint_is_set = true
         this.___waypoint = value
+    }
+    
+    static speed: number
+    private ___speed_is_set: boolean
+    private ___speed: number
+    get speed(): number {
+        return this.___speed_is_set ? this.___speed : EnemyEntityObject.speed
+    }
+    set speed(value: number) {
+        this.___speed_is_set = true
+        this.___speed = value
     }
     
     public static __initEnemyEntityObject() {
@@ -179,11 +190,12 @@ class EnemyEntityObject {
         // Current position
         EnemyEntityObject.waypoint = [-1, -1]
         // Waypoint Where its moving too.
+        EnemyEntityObject.speed = 1
         EnemyEntityObject.entSprite = null
     }
     
-    constructor(entSprite: Sprite) {
-        this.entSprite = entSprite
+    constructor() {
+        
     }
     
     public setPos(pos: number[]) {
@@ -198,13 +210,61 @@ class EnemyEntityObject {
         
     }
     
+    public doMovement() {
+        if (this.entSprite == null || this.waypoint == null) {
+            return
+        }
+        
+        let cx = this.pos[0]
+        let cy = this.pos[1]
+        let wx = this.waypoint[0]
+        let wy = this.waypoint[1]
+        if (calcDistance(cx, cy, wx, wy) > 1) {
+            if (cx < wx) {
+                cx += this.speed
+            } else if (cx > wx) {
+                cx -= this.speed
+            }
+            
+            if (cy < wy) {
+                cy += this.speed
+            } else if (cy > wy) {
+                cy -= this.speed
+            }
+            
+        }
+        
+        this.pos[0] = cx
+        this.pos[1] = cy
+        this.entSprite.setPosition(cx, cy)
+    }
+    
     public getSprite(): Sprite {
         return this.entSprite
+    }
+    
+    public spawn() {
+        
     }
     
 }
 
 EnemyEntityObject.__initEnemyEntityObject()
+
+class EnemyEntityWitch extends EnemyEntityObject {
+    public update() {
+        let dtPlayer = calcDistance(this.pos[0], this.pos[1], playerOne.x, playerOne.y)
+        if (dtPlayer >= 6) {
+            
+        }
+        
+    }
+    
+    public spawn() {
+        this.entSprite = sprites.create(assets.image`En_Witch_Idle`, SpriteKind.Enemy)
+    }
+    
+}
 
 namespace SpriteKind {
     export const Item = SpriteKind.create()
@@ -524,6 +584,8 @@ function getDescription(itemID4: number): string {
         return "Improve your attack."
     } else if (itemID4 == 4) {
         return "Improve your defense."
+    } else if (itemID4 == 5) {
+        return "Changes your attack."
     } else {
         //  None
         return "Empty slot."
@@ -538,31 +600,24 @@ function getDescription(itemID4: number): string {
 //  2 = Burger
 //  3 = Iron_Sword
 //  4 = Wooden_Shield
-//  5 = Iron_Armour_Set (TODO)
+//  5 - Crossbow
+//  6 = Iron_Armour_Set (TODO)
 function getImage(itemID5: number): Image {
     if (itemID5 == 1) {
         //  Health pot
-        return assets.image`
-            HealthItem
-        `
+        return assets.image`HealthItem`
     } else if (itemID5 == 2) {
         //  Burger
-        return assets.image`
-            BurgerItem
-        `
+        return assets.image`BurgerItem`
     } else if (itemID5 == 3) {
-        return assets.image`
-            SwordItem
-        `
+        return assets.image`SwordItem`
     } else if (itemID5 == 4) {
-        return assets.image`
-            ShieldItem
-        `
+        return assets.image`ShieldItem`
+    } else if (itemID5 == 5) {
+        return assets.image`CrossbowItem`
     } else {
         //  None
-        return assets.image`
-            EmptyItem
-        `
+        return assets.image`EmptyItem`
     }
     
 }
@@ -692,7 +747,7 @@ function getLevelDoorData(): LvlDoorData[] {
 function getLevelEnemyData(): EnemySpawnPointData[] {
     // #Level 1 (0) will have no enemies.
     if (levelID == 1) {
-        return [new EnemySpawnPointData([5, 12], 6, [])]
+        return [new EnemySpawnPointData([5, 12], 6, [new EnemyEntityWitch()])]
     } else {
         return []
     }
@@ -720,7 +775,9 @@ function updateLevel() {
         tilePos = z.getPos()
         distance = calcDistance(pos[0], pos[1], tilePos[0], tilePos[1])
         if (distance <= z.getTrigDist()) {
-            
+            for (let y of z.getEnemiesList()) {
+                y
+            }
         }
         
     }
@@ -778,7 +835,7 @@ let inventorySlot = 0
 let inventoryOpen = false
 let inventoryOpenDelay = new msDelay()
 let inventoryInputDelay = new msDelay()
-let playerInventory = [3, 1, 2, 4]
+let playerInventory = [3, 1, 2, 5]
 // Inventory END
 //  Action START
 let actionSelectIndex = 0

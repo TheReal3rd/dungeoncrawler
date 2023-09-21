@@ -57,10 +57,11 @@ class EnemySpawnPointData():
 class EnemyEntityObject():
     pos = (0,0)#Current position
     waypoint = (-1, -1)#Waypoint Where its moving too.
+    speed = 1
     entSprite = None
 
-    def __init__(entSprite: Sprite):
-        self.entSprite = entSprite
+    def __init__():
+      pass
 
     def setPos(self, pos):
         self.pos = pos
@@ -71,9 +72,43 @@ class EnemyEntityObject():
     def update(self):
         pass
 
+    def doMovement(self):
+        if self.entSprite == None or self.waypoint == None:
+            return
+
+        cx = self.pos[0]
+        cy = self.pos[1]
+        wx = self.waypoint[0]
+        wy = self.waypoint[1]
+        if calcDistance(cx, cy, wx, wy) > 1:
+            if cx < wx:
+                cx += self.speed
+            elif cx > wx:
+                cx -= self.speed
+
+            if cy < wy:
+                cy += self.speed
+            elif cy > wy:
+                cy -= self.speed
+        self.pos[0] = cx
+        self.pos[1] = cy
+        self.entSprite.setPosition(cx, cy)
+
     def getSprite(self):
         return self.entSprite
+    
+    def spawn(self):
+        pass
 
+class EnemyEntityWitch(EnemyEntityObject):
+
+    def update(self):
+        dtPlayer = calcDistance(self.pos[0], self.pos[1], playerOne.x, playerOne.y)
+        if dtPlayer >= 6:
+            pass
+
+    def spawn(self):
+        self.entSprite = sprites.create(assets.image("""En_Witch_Idle"""), SpriteKind.enemy)
 
 @namespace
 class SpriteKind:
@@ -280,6 +315,8 @@ def getDescription(itemID4: number):
         return "Improve your attack."
     elif itemID4 == 4:
         return "Improve your defense."
+    elif itemID4 == 5:
+        return "Changes your attack."
     else:
         # None
         return "Empty slot."
@@ -291,31 +328,22 @@ def getDescription(itemID4: number):
 # 2 = Burger
 # 3 = Iron_Sword
 # 4 = Wooden_Shield
-# 5 = Iron_Armour_Set (TODO)
+# 5 - Crossbow
+# 6 = Iron_Armour_Set (TODO)
 def getImage(itemID5: number):
-    if itemID5 == 1:
-        # Health pot
-        return assets.image("""
-            HealthItem
-        """)
-    elif itemID5 == 2:
-        # Burger
-        return assets.image("""
-            BurgerItem
-        """)
+    if itemID5 == 1:# Health pot
+        return assets.image("""HealthItem""")
+    elif itemID5 == 2:# Burger
+        return assets.image("""BurgerItem""")
     elif itemID5 == 3:
-        return assets.image("""
-            SwordItem
-        """)
+        return assets.image("""SwordItem""")
     elif itemID5 == 4:
-        return assets.image("""
-            ShieldItem
-        """)
+        return assets.image("""ShieldItem""")
+    elif itemID5 == 5:
+        return assets.image("""CrossbowItem""")
     else:
         # None
-        return assets.image("""
-            EmptyItem
-        """)
+        return assets.image("""EmptyItem""")
 ### Inventory END 
 
 
@@ -431,7 +459,7 @@ def getLevelEnemyData():
     ##Level 1 (0) will have no enemies.
     if levelID == 1:
         return [
-            EnemySpawnPointData((5,12), 6, [])
+            EnemySpawnPointData((5,12), 6, [EnemyEntityWitch()])
         ]
     else:
         return []
@@ -452,7 +480,8 @@ def updateLevel():
         tilePos = z.getPos()
         distance = calcDistance(pos[0], pos[1], tilePos[0], tilePos[1])
         if distance <= z.getTrigDist():
-            pass
+            for y in z.getEnemiesList():
+                y.spawn()
 
 ### Level Functions END
 
@@ -525,7 +554,7 @@ inventorySlot = 0
 inventoryOpen = False
 inventoryOpenDelay = msDelay()
 inventoryInputDelay = msDelay()
-playerInventory = [3, 1, 2, 4]
+playerInventory = [3, 1, 2, 5]
 #Inventory END
 
 
