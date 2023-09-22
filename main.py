@@ -27,31 +27,12 @@ class LvlDoorData():
     def getPlayerPos(self):
         return self.playerPos
 
-#Holds Levels Spawn Point data that then uses EnemySpawn Data.
-class EnemySpawnPointData():
-    pos = (0,0)
-    trigDist = 0
-    enemiesList = []
-
-    def __init__(pos, trigDist, enemiesList):
-        self.pos = pos
-        self.trigDist = trigDist
-        self.enemiesList = enemiesList
-
-    def getPos(self):
-        return self.pos
-
-    def getTrigDist(self):
-        return self.trigDist
-
-    def getEnemiesList(self):
-        return self.enemiesList
 
 #Movement maybe an A* like movement system? however we have very little processing? So may not work well.
 #Maybe a split processing approach?
 #
 # Check whether entity needs to move if so move it. then end the loop and store the index of the current ent.
-# After the game loop has finished we move to the next entity 
+# After the game loop has finished we move to the next entity
 # Bascially looping through one entity at a time but not looping through all the ent during on game update.
 #
 class EnemyEntityObject():
@@ -59,9 +40,10 @@ class EnemyEntityObject():
     waypoint = (-1, -1)#Waypoint Where its moving too.
     speed = 1
     entSprite = None
+    texture = None
 
-    def __init__():
-      pass
+    def __init__(texture):
+      self.texture = texture #"""En_Witch_Idle"""
 
     def setPos(self, pos):
         self.pos = pos
@@ -92,29 +74,37 @@ class EnemyEntityObject():
                 cy -= self.speed
         self.pos[0] = cx
         self.pos[1] = cy
-        self.entSprite.setPosition(cx, cy)
+        #self.entSprite.setPosition(cx, cy)
 
     def getSprite(self):
         return self.entSprite
-    
-    def spawn(self):
-        pass
 
-class EnemyEntityWitch(EnemyEntityObject):
+    def spawnAll():
+        self.entSprite = sprites.create(assets.image("""En_Witch_Idle"""), SpriteKind.Enemy)
+        
+#Holds Levels Spawn Point data that then uses EnemySpawn Data.
+class EnemySpawnPointData():
+    pos = (0,0)
+    trigDist = 0
+    enemiesList = []
+    spawned = False
 
-    def update(self):
-        dtPlayer = calcDistance(self.pos[0], self.pos[1], playerOne.x, playerOne.y)
-        if dtPlayer >= 6:
+    def __init__(pos, trigDist, enemiesList):
+        self.pos = pos
+        self.trigDist = trigDist
+        self.enemiesList = enemiesList
+
+    def getPos(self):
+        return self.pos
+
+    def getTrigDist(self):
+        return self.trigDist
+
+    def spawnAll(self):
+        for ent in self.enemiesList:
             pass
+            #ent.spawnAll()
 
-    def spawn(self):
-        self.entSprite = sprites.create(assets.image("""En_Witch_Idle"""), SpriteKind.enemy)
-
-@namespace
-class SpriteKind:
-    Item = SpriteKind.create()
-    Inventory = SpriteKind.create()
-    PlayerProjectile = SpriteKind.create()
 
 def useItem(itemID: number):
     global playerAttack, playerDefense
@@ -187,6 +177,12 @@ class msDelay():#This breaks blocks. and its annoying.
             return True
         else:
             return False
+
+@namespace
+class SpriteKind:
+    Item = SpriteKind.create()
+    Inventory = SpriteKind.create()
+    PlayerProjectile = SpriteKind.create()
 
 def updatePlayer():
     global inventorySlot, inventoryOpen, playerFrameOffsetIndex, playerFrameIndex, actionSelectIndex, playerAction, notifyText
@@ -459,7 +455,7 @@ def getLevelEnemyData():
     ##Level 1 (0) will have no enemies.
     if levelID == 1:
         return [
-            EnemySpawnPointData((5,12), 6, [EnemyEntityWitch()])
+            EnemySpawnPointData((5,12), 6, [EnemyEntityObject("""En_Witch_Idle""")])
         ]
     else:
         return []
@@ -480,8 +476,9 @@ def updateLevel():
         tilePos = z.getPos()
         distance = calcDistance(pos[0], pos[1], tilePos[0], tilePos[1])
         if distance <= z.getTrigDist():
-            for y in z.getEnemiesList():
-                y.spawn()
+            z.spawnAll()
+                #y.spawnToWorld() This doesn't work. Not sure why. 
+                
 
 ### Level Functions END
 

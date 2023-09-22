@@ -70,77 +70,25 @@ class LvlDoorData {
 
 LvlDoorData.__initLvlDoorData()
 
-// Holds Levels Spawn Point data that then uses EnemySpawn Data.
-class EnemySpawnPointData {
-    static pos: number[]
-    private ___pos_is_set: boolean
-    private ___pos: number[]
-    get pos(): number[] {
-        return this.___pos_is_set ? this.___pos : EnemySpawnPointData.pos
-    }
-    set pos(value: number[]) {
-        this.___pos_is_set = true
-        this.___pos = value
-    }
-    
-    static trigDist: number
-    private ___trigDist_is_set: boolean
-    private ___trigDist: number
-    get trigDist(): number {
-        return this.___trigDist_is_set ? this.___trigDist : EnemySpawnPointData.trigDist
-    }
-    set trigDist(value: number) {
-        this.___trigDist_is_set = true
-        this.___trigDist = value
-    }
-    
-    static enemiesList: any[]
-    private ___enemiesList_is_set: boolean
-    private ___enemiesList: any[]
-    get enemiesList(): any[] {
-        return this.___enemiesList_is_set ? this.___enemiesList : EnemySpawnPointData.enemiesList
-    }
-    set enemiesList(value: any[]) {
-        this.___enemiesList_is_set = true
-        this.___enemiesList = value
-    }
-    
-    public static __initEnemySpawnPointData() {
-        EnemySpawnPointData.pos = [0, 0]
-        EnemySpawnPointData.trigDist = 0
-        EnemySpawnPointData.enemiesList = []
-    }
-    
-    constructor(pos: number[], trigDist: number, enemiesList: any[]) {
-        this.pos = pos
-        this.trigDist = trigDist
-        this.enemiesList = enemiesList
-    }
-    
-    public getPos(): number[] {
-        return this.pos
-    }
-    
-    public getTrigDist(): number {
-        return this.trigDist
-    }
-    
-    public getEnemiesList(): any[] {
-        return this.enemiesList
-    }
-    
-}
-
-EnemySpawnPointData.__initEnemySpawnPointData()
-
 // Movement maybe an A* like movement system? however we have very little processing? So may not work well.
 // Maybe a split processing approach?
 // 
 //  Check whether entity needs to move if so move it. then end the loop and store the index of the current ent.
-//  After the game loop has finished we move to the next entity 
+//  After the game loop has finished we move to the next entity
 //  Bascially looping through one entity at a time but not looping through all the ent during on game update.
 // 
 class EnemyEntityObject {
+    static texture: string
+    private ___texture_is_set: boolean
+    private ___texture: string
+    get texture(): string {
+        return this.___texture_is_set ? this.___texture : EnemyEntityObject.texture
+    }
+    set texture(value: string) {
+        this.___texture_is_set = true
+        this.___texture = value
+    }
+    
     static pos: number[]
     private ___pos_is_set: boolean
     private ___pos: number[]
@@ -192,12 +140,14 @@ class EnemyEntityObject {
         // Waypoint Where its moving too.
         EnemyEntityObject.speed = 1
         EnemyEntityObject.entSprite = null
+        EnemyEntityObject.texture = null
     }
     
-    constructor() {
-        
+    constructor(texture: string) {
+        this.texture = texture
     }
     
+    // """En_Witch_Idle"""
     public setPos(pos: number[]) {
         this.pos = pos
     }
@@ -236,42 +186,99 @@ class EnemyEntityObject {
         
         this.pos[0] = cx
         this.pos[1] = cy
-        this.entSprite.setPosition(cx, cy)
     }
     
+    // self.entSprite.setPosition(cx, cy)
     public getSprite(): Sprite {
         return this.entSprite
     }
     
-    public spawn() {
-        
+    public static spawnAll() {
+        this.entSprite = sprites.create(assets.image`En_Witch_Idle`, SpriteKind.Enemy)
     }
     
 }
 
 EnemyEntityObject.__initEnemyEntityObject()
 
-class EnemyEntityWitch extends EnemyEntityObject {
-    public update() {
-        let dtPlayer = calcDistance(this.pos[0], this.pos[1], playerOne.x, playerOne.y)
-        if (dtPlayer >= 6) {
+// Holds Levels Spawn Point data that then uses EnemySpawn Data.
+class EnemySpawnPointData {
+    static pos: number[]
+    private ___pos_is_set: boolean
+    private ___pos: number[]
+    get pos(): number[] {
+        return this.___pos_is_set ? this.___pos : EnemySpawnPointData.pos
+    }
+    set pos(value: number[]) {
+        this.___pos_is_set = true
+        this.___pos = value
+    }
+    
+    static trigDist: number
+    private ___trigDist_is_set: boolean
+    private ___trigDist: number
+    get trigDist(): number {
+        return this.___trigDist_is_set ? this.___trigDist : EnemySpawnPointData.trigDist
+    }
+    set trigDist(value: number) {
+        this.___trigDist_is_set = true
+        this.___trigDist = value
+    }
+    
+    static enemiesList: any[]
+    private ___enemiesList_is_set: boolean
+    private ___enemiesList: any[]
+    get enemiesList(): any[] {
+        return this.___enemiesList_is_set ? this.___enemiesList : EnemySpawnPointData.enemiesList
+    }
+    set enemiesList(value: any[]) {
+        this.___enemiesList_is_set = true
+        this.___enemiesList = value
+    }
+    
+    static spawned: boolean
+    private ___spawned_is_set: boolean
+    private ___spawned: boolean
+    get spawned(): boolean {
+        return this.___spawned_is_set ? this.___spawned : EnemySpawnPointData.spawned
+    }
+    set spawned(value: boolean) {
+        this.___spawned_is_set = true
+        this.___spawned = value
+    }
+    
+    public static __initEnemySpawnPointData() {
+        EnemySpawnPointData.pos = [0, 0]
+        EnemySpawnPointData.trigDist = 0
+        EnemySpawnPointData.enemiesList = []
+        EnemySpawnPointData.spawned = false
+    }
+    
+    constructor(pos: number[], trigDist: number, enemiesList: any[]) {
+        this.pos = pos
+        this.trigDist = trigDist
+        this.enemiesList = enemiesList
+    }
+    
+    public getPos(): number[] {
+        return this.pos
+    }
+    
+    public getTrigDist(): number {
+        return this.trigDist
+    }
+    
+    public spawnAll() {
+        for (let ent of this.enemiesList) {
             
         }
-        
-    }
-    
-    public spawn() {
-        this.entSprite = sprites.create(assets.image`En_Witch_Idle`, SpriteKind.Enemy)
     }
     
 }
 
-namespace SpriteKind {
-    export const Item = SpriteKind.create()
-    export const Inventory = SpriteKind.create()
-    export const PlayerProjectile = SpriteKind.create()
-}
+EnemySpawnPointData.__initEnemySpawnPointData()
 
+// ent.spawnAll()
 function useItem(itemID: number) {
     
     //  None
@@ -395,6 +402,12 @@ class msDelay {
 }
 
 msDelay.__initmsDelay()
+
+namespace SpriteKind {
+    export const Item = SpriteKind.create()
+    export const Inventory = SpriteKind.create()
+    export const PlayerProjectile = SpriteKind.create()
+}
 
 function updatePlayer() {
     let itemID22: number;
@@ -747,7 +760,7 @@ function getLevelDoorData(): LvlDoorData[] {
 function getLevelEnemyData(): EnemySpawnPointData[] {
     // #Level 1 (0) will have no enemies.
     if (levelID == 1) {
-        return [new EnemySpawnPointData([5, 12], 6, [new EnemyEntityWitch()])]
+        return [new EnemySpawnPointData([5, 12], 6, [new EnemyEntityObject("En_Witch_Idle")])]
     } else {
         return []
     }
@@ -775,14 +788,13 @@ function updateLevel() {
         tilePos = z.getPos()
         distance = calcDistance(pos[0], pos[1], tilePos[0], tilePos[1])
         if (distance <= z.getTrigDist()) {
-            for (let y of z.getEnemiesList()) {
-                y
-            }
+            z.spawnAll()
         }
         
     }
 }
 
+// y.spawnToWorld() This doesn't work. Not sure why. 
 // ## Level Functions END
 // ## Maths Funcs start
 //  Clamp reduce number within a set range.
