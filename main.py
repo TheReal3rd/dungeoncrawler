@@ -27,7 +27,6 @@ class LvlDoorData():
     def getPlayerPos(self):
         return self.playerPos
 
-
 #Movement maybe an A* like movement system? however we have very little processing? So may not work well.
 #Maybe a split processing approach?
 #
@@ -40,10 +39,10 @@ class EnemyEntityObject():
     waypoint = (-1, -1)#Waypoint Where its moving too.
     speed = 1
     entSprite = None
-    texture = None
+    textureID: number = -1
 
-    def __init__(texture):
-      self.texture = texture #"""En_Witch_Idle"""
+    def __init__(textureID):
+      self.textureID = textureID #"""En_Witch_Idle"""
 
     def setPos(self, pos):
         self.pos = pos
@@ -52,7 +51,11 @@ class EnemyEntityObject():
         return self.pos
 
     def update(self):
-        pass
+        if self.entSprite == None:
+            return
+        
+        self.entSprite.setPosition(self.pos[0], self.pos[1])
+
 
     def doMovement(self):
         if self.entSprite == None or self.waypoint == None:
@@ -79,8 +82,11 @@ class EnemyEntityObject():
     def getSprite(self):
         return self.entSprite
 
-    def spawnAll():
-        self.entSprite = sprites.create(assets.image("""En_Witch_Idle"""), SpriteKind.Enemy)
+    def spawnToWorld(self):
+        self.entSprite = sprites.create(getEntityTexture(self.textureID), SpriteKind.Enemy)
+        self.entSprite.set_flag(SpriteFlag.AUTO_DESTROY, False)
+        self.entSprite.set_flag(SpriteFlag.DESTROY_ON_WALL, False)
+        return self.entSprite
         
 #Holds Levels Spawn Point data that then uses EnemySpawn Data.
 class EnemySpawnPointData():
@@ -100,25 +106,16 @@ class EnemySpawnPointData():
     def getTrigDist(self):
         return self.trigDist
 
-    def spawnAll(self):
-        for ent in self.enemiesList:
-            pass
-            #ent.spawnAll()
+    def getEnemiesList(self):
+        return self.enemiesList
 
+    def hasSpawened(self):
+        return self.spawned
 
-def useItem(itemID: number):
-    global playerAttack, playerDefense
-    # None
-    if [1, 2].index(itemID) >= 0:# Health pot and burger
-        info.change_life_by(2)
-        if info.life() >= 6:
-            info.set_life(5)
-    elif itemID == 3:# Sword
-        playerAttack += 1
-    elif itemID == 4:# Shield
-        playerDefense += 1
+    def setSpawned(self, newVar):
+        self.spawned = newVar
 
-# Main instructions
+# Main instructions / Important stuff
 def executeAction(actionID: number):
     global inventoryOpen, playerFrameOffsetIndex
     if actionID == 0:
@@ -340,6 +337,18 @@ def getImage(itemID5: number):
     else:
         # None
         return assets.image("""EmptyItem""")
+
+def useItem(itemID: number):
+    global playerAttack, playerDefense
+    # None
+    if [1, 2].index(itemID) >= 0:# Health pot and burger
+        info.change_life_by(2)
+        if info.life() >= 6:
+            info.set_life(5)
+    elif itemID == 3:# Sword
+        playerAttack += 1
+    elif itemID == 4:# Shield
+        playerDefense += 1
 ### Inventory END 
 
 
@@ -416,6 +425,11 @@ def updateEntities():
         if dist >= 60:
             sprites.destroy(playerProj)
             break
+def getEntityTexture(texID: number):
+    if texID == 0:
+        return assets.image("""En_Witch_Idle""")
+    else:
+        return None
 ### Enemies Funcs END
 
 
@@ -433,30 +447,38 @@ def getLevelDoorData():
     if levelID == 0:
         pos = (48,32)
         return [
-            LvlDoorData((38,24), 1, pos),
-            LvlDoorData((39,24), 1, pos),
-            LvlDoorData((40,24), 1, pos),
-            LvlDoorData((41,24), 1, pos),
-            LvlDoorData((42,24), 1, pos),
-            LvlDoorData((42,23), 1, pos),
-            LvlDoorData((42,22), 1, pos),
-            LvlDoorData((42,21), 1, pos),
-            LvlDoorData((42,20), 1, pos),
-        ]
+                    LvlDoorData((38,24), 1, pos),
+                    LvlDoorData((39,24), 1, pos),
+                    LvlDoorData((40,24), 1, pos),
+                    LvlDoorData((41,24), 1, pos),
+                    LvlDoorData((42,24), 1, pos),
+                    LvlDoorData((42,23), 1, pos),
+                    LvlDoorData((42,22), 1, pos),
+                    LvlDoorData((42,21), 1, pos),
+                    LvlDoorData((42,20), 1, pos),
+                ]
     elif levelID == 1:
         return [
-            LvlDoorData((3, 0), 0, (640, 352)),
-            LvlDoorData((25,3), 0, (640, 352))
-        ]
+                    LvlDoorData((3, 0), 0, (640, 352)),
+                    LvlDoorData((25,3), 0, (640, 352))
+                ]
     else:
         return []
 
 def getLevelEnemyData():
+    global cachedEnemyData, levelID, cachedEnemyData
+
+    if cachedLevelID == levelID:
+        return cachedEnemyData
+
     ##Level 1 (0) will have no enemies.
     if levelID == 1:
-        return [
-            EnemySpawnPointData((5,12), 6, [EnemyEntityObject("""En_Witch_Idle""")])
-        ]
+        returnVar = [
+                    EnemySpawnPointData((5,12), 6, [0])
+                ]
+        cachedLevelID = levelID
+        cachedEnemyData = returnVar
+        return returnVar
     else:
         return []
 
@@ -476,9 +498,18 @@ def updateLevel():
         tilePos = z.getPos()
         distance = calcDistance(pos[0], pos[1], tilePos[0], tilePos[1])
         if distance <= z.getTrigDist():
-            z.spawnAll()
-                #y.spawnToWorld() This doesn't work. Not sure why. 
-                
+            for eid in z.getEnemiesList():
+                if z.hasSpawened():
+                    continue 
+
+                #Create the new sprite and add to the entity list.
+                temp = EnemyEntityObject(eid)
+                pos = (tilePos[0] * 16, tilePos[1] * 16)
+                temp.setPos(pos)
+                temp.update()
+                temp.spawnToWorld()
+
+                z.setSpawned(True)
 
 ### Level Functions END
 
@@ -508,6 +539,13 @@ def spriteToScreen(textSprite: Sprite):
     return [clamp(80, (16 * levelSizes[levelID]) - 80 , playerOne.x) - (scene.screen_width() - textSprite.width) / 2,
         clamp(60, (16 * levelSizes[levelID]) - 60, playerOne.y) - (scene.screen_height() - textSprite.height) / 2]
 ### Maths Funcs END
+
+
+#To hold the current level data.
+#Level info cache START
+cachedEnemyData: List[EnemySpawnPointData] = []
+cachedLevelID = -1
+#Level info cache END
 
 
 

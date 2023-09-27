@@ -78,15 +78,15 @@ LvlDoorData.__initLvlDoorData()
 //  Bascially looping through one entity at a time but not looping through all the ent during on game update.
 // 
 class EnemyEntityObject {
-    static texture: string
-    private ___texture_is_set: boolean
-    private ___texture: string
-    get texture(): string {
-        return this.___texture_is_set ? this.___texture : EnemyEntityObject.texture
+    static textureID: number
+    private ___textureID_is_set: boolean
+    private ___textureID: number
+    get textureID(): number {
+        return this.___textureID_is_set ? this.___textureID : EnemyEntityObject.textureID
     }
-    set texture(value: string) {
-        this.___texture_is_set = true
-        this.___texture = value
+    set textureID(value: number) {
+        this.___textureID_is_set = true
+        this.___textureID = value
     }
     
     static pos: number[]
@@ -140,11 +140,11 @@ class EnemyEntityObject {
         // Waypoint Where its moving too.
         EnemyEntityObject.speed = 1
         EnemyEntityObject.entSprite = null
-        EnemyEntityObject.texture = null
+        EnemyEntityObject.textureID = -1
     }
     
-    constructor(texture: string) {
-        this.texture = texture
+    constructor(textureID: number) {
+        this.textureID = textureID
     }
     
     // """En_Witch_Idle"""
@@ -157,7 +157,11 @@ class EnemyEntityObject {
     }
     
     public update() {
+        if (this.entSprite == null) {
+            return
+        }
         
+        this.entSprite.setPosition(this.pos[0], this.pos[1])
     }
     
     public doMovement() {
@@ -193,8 +197,11 @@ class EnemyEntityObject {
         return this.entSprite
     }
     
-    public static spawnAll() {
-        this.entSprite = sprites.create(assets.image`En_Witch_Idle`, SpriteKind.Enemy)
+    public spawnToWorld(): Sprite {
+        this.entSprite = sprites.create(getEntityTexture(this.textureID), SpriteKind.Enemy)
+        this.entSprite.setFlag(SpriteFlag.AutoDestroy, false)
+        this.entSprite.setFlag(SpriteFlag.DestroyOnWall, false)
+        return this.entSprite
     }
     
 }
@@ -225,13 +232,13 @@ class EnemySpawnPointData {
         this.___trigDist = value
     }
     
-    static enemiesList: any[]
+    static enemiesList: number[]
     private ___enemiesList_is_set: boolean
-    private ___enemiesList: any[]
-    get enemiesList(): any[] {
+    private ___enemiesList: number[]
+    get enemiesList(): number[] {
         return this.___enemiesList_is_set ? this.___enemiesList : EnemySpawnPointData.enemiesList
     }
-    set enemiesList(value: any[]) {
+    set enemiesList(value: number[]) {
         this.___enemiesList_is_set = true
         this.___enemiesList = value
     }
@@ -254,7 +261,7 @@ class EnemySpawnPointData {
         EnemySpawnPointData.spawned = false
     }
     
-    constructor(pos: number[], trigDist: number, enemiesList: any[]) {
+    constructor(pos: number[], trigDist: number, enemiesList: number[]) {
         this.pos = pos
         this.trigDist = trigDist
         this.enemiesList = enemiesList
@@ -268,38 +275,23 @@ class EnemySpawnPointData {
         return this.trigDist
     }
     
-    public spawnAll() {
-        for (let ent of this.enemiesList) {
-            
-        }
+    public getEnemiesList(): number[] {
+        return this.enemiesList
+    }
+    
+    public hasSpawened(): boolean {
+        return this.spawned
+    }
+    
+    public setSpawned(newVar: boolean) {
+        this.spawned = newVar
     }
     
 }
 
 EnemySpawnPointData.__initEnemySpawnPointData()
 
-// ent.spawnAll()
-function useItem(itemID: number) {
-    
-    //  None
-    if ([1, 2].indexOf(itemID) >= 0) {
-        //  Health pot and burger
-        info.changeLifeBy(2)
-        if (info.life() >= 6) {
-            info.setLife(5)
-        }
-        
-    } else if (itemID == 3) {
-        //  Sword
-        playerAttack += 1
-    } else if (itemID == 4) {
-        //  Shield
-        playerDefense += 1
-    }
-    
-}
-
-//  Main instructions
+//  Main instructions / Important stuff
 function executeAction(actionID: number) {
     let projVel: number[];
     let projImage: Image;
@@ -635,6 +627,26 @@ function getImage(itemID5: number): Image {
     
 }
 
+function useItem(itemID: number) {
+    
+    //  None
+    if ([1, 2].indexOf(itemID) >= 0) {
+        //  Health pot and burger
+        info.changeLifeBy(2)
+        if (info.life() >= 6) {
+            info.setLife(5)
+        }
+        
+    } else if (itemID == 3) {
+        //  Sword
+        playerAttack += 1
+    } else if (itemID == 4) {
+        //  Shield
+        playerDefense += 1
+    }
+    
+}
+
 // ## Inventory END 
 // ## GUI START 
 // Sends a notification to the top right of the screen.
@@ -730,6 +742,15 @@ function updateEntities() {
     }
 }
 
+function getEntityTexture(texID: number): Image {
+    if (texID == 0) {
+        return assets.image`En_Witch_Idle`
+    } else {
+        return null
+    }
+    
+}
+
 // ## Enemies Funcs END
 // ## Level Functions START
 function setLevel() {
@@ -758,9 +779,19 @@ function getLevelDoorData(): LvlDoorData[] {
 }
 
 function getLevelEnemyData(): EnemySpawnPointData[] {
+    let returnVar: EnemySpawnPointData[];
+    let cachedLevelID: number;
+    
+    if (cachedLevelID == levelID) {
+        return cachedEnemyData
+    }
+    
     // #Level 1 (0) will have no enemies.
     if (levelID == 1) {
-        return [new EnemySpawnPointData([5, 12], 6, [new EnemyEntityObject("En_Witch_Idle")])]
+        returnVar = [new EnemySpawnPointData([5, 12], 6, [0])]
+        cachedLevelID = levelID
+        cachedEnemyData = returnVar
+        return returnVar
     } else {
         return []
     }
@@ -771,6 +802,7 @@ function updateLevel() {
     let tilePos: number[];
     let newPos: number[];
     let distance: number;
+    let temp: EnemyEntityObject;
     
     let pos = [Math.trunc(playerOne.x / 16), Math.trunc(playerOne.y / 16)]
     for (let x of getLevelDoorData()) {
@@ -788,13 +820,24 @@ function updateLevel() {
         tilePos = z.getPos()
         distance = calcDistance(pos[0], pos[1], tilePos[0], tilePos[1])
         if (distance <= z.getTrigDist()) {
-            z.spawnAll()
+            for (let eid of z.getEnemiesList()) {
+                if (z.hasSpawened()) {
+                    continue
+                }
+                
+                // Create the new sprite and add to the entity list.
+                temp = new EnemyEntityObject(eid)
+                pos = [tilePos[0] * 16, tilePos[1] * 16]
+                temp.setPos(pos)
+                temp.update()
+                temp.spawnToWorld()
+                z.setSpawned(true)
+            }
         }
         
     }
 }
 
-// y.spawnToWorld() This doesn't work. Not sure why. 
 // ## Level Functions END
 // ## Maths Funcs start
 //  Clamp reduce number within a set range.
@@ -829,6 +872,11 @@ function spriteToScreen(textSprite: Sprite): number[] {
 }
 
 // ## Maths Funcs END
+// To hold the current level data.
+// Level info cache START
+let cachedEnemyData : EnemySpawnPointData[] = []
+let cachedLevelID = -1
+// Level info cache END
 // Level info START
 let levelSizes = [50, 26]
 let levelID = 0
