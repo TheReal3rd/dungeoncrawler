@@ -77,6 +77,9 @@ LvlDoorData.__initLvlDoorData()
 //  After the game loop has finished we move to the next entity
 //  Bascially looping through one entity at a time but not looping through all the ent during on game update.
 // 
+//  INFO
+//  0 = Witch_One
+// 
 class EnemyEntityObject {
     static textureID: number
     private ___textureID_is_set: boolean
@@ -133,6 +136,17 @@ class EnemyEntityObject {
         this.___speed = value
     }
     
+    static health: number
+    private ___health_is_set: boolean
+    private ___health: number
+    get health(): number {
+        return this.___health_is_set ? this.___health : EnemyEntityObject.health
+    }
+    set health(value: number) {
+        this.___health_is_set = true
+        this.___health = value
+    }
+    
     public static __initEnemyEntityObject() {
         EnemyEntityObject.pos = [0, 0]
         // Current position
@@ -141,6 +155,7 @@ class EnemyEntityObject {
         EnemyEntityObject.speed = 1
         EnemyEntityObject.entSprite = null
         EnemyEntityObject.textureID = -1
+        EnemyEntityObject.health = 0
     }
     
     constructor(textureID: number) {
@@ -243,28 +258,29 @@ class EnemySpawnPointData {
         this.___enemiesList = value
     }
     
-    static spawned: boolean
-    private ___spawned_is_set: boolean
-    private ___spawned: boolean
-    get spawned(): boolean {
-        return this.___spawned_is_set ? this.___spawned : EnemySpawnPointData.spawned
+    static nameID: string
+    private ___nameID_is_set: boolean
+    private ___nameID: string
+    get nameID(): string {
+        return this.___nameID_is_set ? this.___nameID : EnemySpawnPointData.nameID
     }
-    set spawned(value: boolean) {
-        this.___spawned_is_set = true
-        this.___spawned = value
+    set nameID(value: string) {
+        this.___nameID_is_set = true
+        this.___nameID = value
     }
     
     public static __initEnemySpawnPointData() {
+        EnemySpawnPointData.nameID = ""
         EnemySpawnPointData.pos = [0, 0]
         EnemySpawnPointData.trigDist = 0
         EnemySpawnPointData.enemiesList = []
-        EnemySpawnPointData.spawned = false
     }
     
-    constructor(pos: number[], trigDist: number, enemiesList: number[]) {
+    constructor(nameID: string, pos: number[], trigDist: number, enemiesList: number[]) {
         this.pos = pos
         this.trigDist = trigDist
         this.enemiesList = enemiesList
+        this.nameID = nameID
     }
     
     public getPos(): number[] {
@@ -279,12 +295,8 @@ class EnemySpawnPointData {
         return this.enemiesList
     }
     
-    public hasSpawened(): boolean {
-        return this.spawned
-    }
-    
-    public setSpawned(newVar: boolean) {
-        this.spawned = newVar
+    public getNameID(): string {
+        return this.nameID
     }
     
 }
@@ -424,7 +436,7 @@ function updatePlayer() {
                 tempSprite = sprites.create(getImage(itemID22), SpriteKind.Item)
                 tempSprite.setPosition(playerOne.x, playerOne.y)
                 tempSprite.z = playerOne.z - 1
-                droppedItemsTable.push(["" + tempSprite, "" + ("" + itemID22)])
+                droppedItemsTable.push(["" + tempSprite, "" + itemID22])
                 playerInventory[inventorySlot] = 0
             } else if (controller.right.isPressed()) {
                 //  Inspect Item
@@ -488,9 +500,9 @@ function updatePlayer() {
                 playerFrameIndex = 0
             }
             
-            console.log("X: " + playerOne.x + " Y: " + playerOne.y + " TileMap[X: " + Math.trunc(playerOne.x / 16) + " Y: " + Math.trunc(playerOne.y / 16) + "]")
         }
         
+        // print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
         //  Set frame
         playerOne.setImage(playerFrames[playerFrameIndex + playerFrameOffsetIndex])
         //  END Movement
@@ -755,6 +767,11 @@ function getEntityTexture(texID: number): Image {
 // ## Level Functions START
 function setLevel() {
     // Set the current level to the levelID
+    
+    spawnedAreas = []
+    droppedItemsTable = []
+    destroyAllEntities()
+    sprites.destroyAllSpritesOfKind(SpriteKind.Item)
     let lvl = null
     if (levelID == 0) {
         lvl = tilemap`Lv0_Intro`
@@ -779,19 +796,11 @@ function getLevelDoorData(): LvlDoorData[] {
 }
 
 function getLevelEnemyData(): EnemySpawnPointData[] {
-    let returnVar: EnemySpawnPointData[];
-    let cachedLevelID: number;
-    
-    if (cachedLevelID == levelID) {
-        return cachedEnemyData
-    }
+    // No point to add Cache as its called once anyway. So the bool isn't changing???
     
     // #Level 1 (0) will have no enemies.
     if (levelID == 1) {
-        returnVar = [new EnemySpawnPointData([5, 12], 6, [0])]
-        cachedLevelID = levelID
-        cachedEnemyData = returnVar
-        return returnVar
+        return [new EnemySpawnPointData("HallWay1", [5, 12], 6, [0])]
     } else {
         return []
     }
@@ -817,24 +826,33 @@ function updateLevel() {
         
     }
     for (let z of getLevelEnemyData()) {
+        if (spawnedAreas.indexOf(z.getNameID()) >= 0) {
+            continue
+        }
+        
         tilePos = z.getPos()
         distance = calcDistance(pos[0], pos[1], tilePos[0], tilePos[1])
         if (distance <= z.getTrigDist()) {
             for (let eid of z.getEnemiesList()) {
-                if (z.hasSpawened()) {
-                    continue
-                }
-                
                 // Create the new sprite and add to the entity list.
                 temp = new EnemyEntityObject(eid)
                 pos = [tilePos[0] * 16, tilePos[1] * 16]
                 temp.setPos(pos)
-                temp.update()
                 temp.spawnToWorld()
-                z.setSpawned(true)
+                temp.update()
+                enemyList.push(temp)
+                spawnedAreas.push(z.getNameID())
             }
         }
         
+    }
+}
+
+function destroyAllEntities() {
+    
+    for (let z of enemyList) {
+        z.getSprite().setFlag(SpriteFlag.AutoDestroy, false)
+        sprites.destroy(z.getSprite())
     }
 }
 
@@ -872,15 +890,12 @@ function spriteToScreen(textSprite: Sprite): number[] {
 }
 
 // ## Maths Funcs END
-// To hold the current level data.
-// Level info cache START
-let cachedEnemyData : EnemySpawnPointData[] = []
-let cachedLevelID = -1
-// Level info cache END
 // Level info START
 let levelSizes = [50, 26]
 let levelID = 0
-let enemyList = []
+let spawnedAreas : String[] = []
+// Yes kinda cringe but a bool didn't work. So this stores the NameID of areas that have spawned its enemies.
+let enemyList : EnemyEntityObject[] = []
 let droppedItemsTable = [["", "0"]]
 // Level info END
 // Draw vars START

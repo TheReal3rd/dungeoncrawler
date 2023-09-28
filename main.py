@@ -34,12 +34,16 @@ class LvlDoorData():
 # After the game loop has finished we move to the next entity
 # Bascially looping through one entity at a time but not looping through all the ent during on game update.
 #
+# INFO
+# 0 = Witch_One
+#
 class EnemyEntityObject():
     pos = (0,0)#Current position
     waypoint = (-1, -1)#Waypoint Where its moving too.
     speed = 1
     entSprite = None
     textureID: number = -1
+    health = 0
 
     def __init__(textureID):
       self.textureID = textureID #"""En_Witch_Idle"""
@@ -90,15 +94,16 @@ class EnemyEntityObject():
         
 #Holds Levels Spawn Point data that then uses EnemySpawn Data.
 class EnemySpawnPointData():
+    nameID = ""
     pos = (0,0)
     trigDist = 0
     enemiesList = []
-    spawned = False
 
-    def __init__(pos, trigDist, enemiesList):
+    def __init__(nameID, pos, trigDist, enemiesList):
         self.pos = pos
         self.trigDist = trigDist
         self.enemiesList = enemiesList
+        self.nameID = nameID
 
     def getPos(self):
         return self.pos
@@ -109,11 +114,8 @@ class EnemySpawnPointData():
     def getEnemiesList(self):
         return self.enemiesList
 
-    def hasSpawened(self):
-        return self.spawned
-
-    def setSpawned(self, newVar):
-        self.spawned = newVar
+    def getNameID(self):
+        return self.nameID
 
 # Main instructions / Important stuff
 def executeAction(actionID: number):
@@ -197,7 +199,7 @@ def updatePlayer():
                 tempSprite = sprites.create(getImage(itemID22), SpriteKind.Item)
                 tempSprite.set_position(playerOne.x, playerOne.y)
                 tempSprite.z = playerOne.z - 1
-                droppedItemsTable.append([str(tempSprite), "" + str(itemID22)])
+                droppedItemsTable.append([str(tempSprite), str(itemID22)])
                 playerInventory[inventorySlot] = 0
             elif controller.right.is_pressed():
                 # Inspect Item
@@ -239,7 +241,7 @@ def updatePlayer():
             playerFrameIndex += 1
             if playerFrameIndex >= 4:
                 playerFrameIndex = 0
-            print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
+            #print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
         # Set frame
         playerOne.set_image(playerFrames[playerFrameIndex + playerFrameOffsetIndex])
         # END Movement
@@ -425,6 +427,7 @@ def updateEntities():
         if dist >= 60:
             sprites.destroy(playerProj)
             break
+
 def getEntityTexture(texID: number):
     if texID == 0:
         return assets.image("""En_Witch_Idle""")
@@ -436,6 +439,12 @@ def getEntityTexture(texID: number):
 
 ### Level Functions START
 def setLevel():#Set the current level to the levelID
+    global spawnedAreas, droppedItemsTable
+    spawnedAreas = []
+    droppedItemsTable = []
+    destroyAllEntities()
+    sprites.destroy_all_sprites_of_kind(SpriteKind.Item)
+    
     lvl = None
     if levelID == 0:
         lvl = tilemap("""Lv0_Intro""")
@@ -465,25 +474,18 @@ def getLevelDoorData():
     else:
         return []
 
-def getLevelEnemyData():
-    global cachedEnemyData, levelID, cachedEnemyData
-
-    if cachedLevelID == levelID:
-        return cachedEnemyData
-
+def getLevelEnemyData():#No point to add Cache as its called once anyway. So the bool isn't changing???
+    global levelID
     ##Level 1 (0) will have no enemies.
     if levelID == 1:
-        returnVar = [
-                    EnemySpawnPointData((5,12), 6, [0])
-                ]
-        cachedLevelID = levelID
-        cachedEnemyData = returnVar
-        return returnVar
+        return [
+            EnemySpawnPointData("HallWay1", (5,12), 6, [0])
+        ]
     else:
         return []
 
 def updateLevel():
-    global levelID, playerOne
+    global levelID, playerOne, spawnedAreas
     pos = (int(playerOne.x / 16), int(playerOne.y / 16))
     for x in getLevelDoorData():
         tilePos = x.getPos()
@@ -495,21 +497,29 @@ def updateLevel():
             setLevel()
 
     for z in getLevelEnemyData():
+        if z.getNameID() in spawnedAreas:
+            continue
+
         tilePos = z.getPos()
         distance = calcDistance(pos[0], pos[1], tilePos[0], tilePos[1])
         if distance <= z.getTrigDist():
             for eid in z.getEnemiesList():
-                if z.hasSpawened():
-                    continue 
 
                 #Create the new sprite and add to the entity list.
                 temp = EnemyEntityObject(eid)
                 pos = (tilePos[0] * 16, tilePos[1] * 16)
                 temp.setPos(pos)
-                temp.update()
                 temp.spawnToWorld()
+                temp.update()
 
-                z.setSpawned(True)
+                enemyList.append(temp)
+                spawnedAreas.append(z.getNameID())
+
+def destroyAllEntities():
+    global enemyList
+    for z in enemyList:
+        z.getSprite().set_flag(SpriteFlag.AUTO_DESTROY, False)
+        sprites.destroy( z.getSprite())
 
 ### Level Functions END
 
@@ -541,18 +551,12 @@ def spriteToScreen(textSprite: Sprite):
 ### Maths Funcs END
 
 
-#To hold the current level data.
-#Level info cache START
-cachedEnemyData: List[EnemySpawnPointData] = []
-cachedLevelID = -1
-#Level info cache END
-
-
 
 #Level info START
 levelSizes = [ 50, 26 ]
 levelID = 0
-enemyList = []
+spawnedAreas: List[String] = []#Yes kinda cringe but a bool didn't work. So this stores the NameID of areas that have spawned its enemies.
+enemyList: List[EnemyEntityObject] = []
 droppedItemsTable = [["", "0"]]
 #Level info END
 
