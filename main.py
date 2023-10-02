@@ -44,9 +44,14 @@ class EnemyEntityObject():
     entSprite = None
     textureID: number = -1
     health = 0
+    shouldDelete = False
 
     def __init__(textureID):
       self.textureID = textureID #"""En_Witch_Idle"""
+      self.waypoint = None
+      if textureID == 0:
+          self.health = 50
+        
 
     def setPos(self, pos):
         self.pos = pos
@@ -55,9 +60,25 @@ class EnemyEntityObject():
         return self.pos
 
     def update(self):
+        global playerOne
         if self.entSprite == None:
+            self.shouldDelete = True
+            return
+
+        if self.health <= 0:
+            self.shouldDelete = True
+            self.entSprite.set_flag(SpriteFlag.AUTO_DESTROY, False)
+            self.entSprite.destroy()
             return
         
+        self.doMovement()
+
+        distToPlayer = calcDistance(self.pos[0], self.pos[1], playerOne.x, playerOne.y)
+        if distToPlayer <= 4:
+            pass #TODO Attack the player.
+        else:
+            pass #TODO add idle animations.
+
         self.entSprite.setPosition(self.pos[0], self.pos[1])
 
 
@@ -81,7 +102,6 @@ class EnemyEntityObject():
                 cy -= self.speed
         self.pos[0] = cx
         self.pos[1] = cy
-        #self.entSprite.setPosition(cx, cy)
 
     def getSprite(self):
         return self.entSprite
@@ -399,8 +419,9 @@ def onScreen():
 
 ### Enemies Funcs START
 #Checks whether entities should spawn or not.
-def spawnCheck():
+def spawnCheck(pos):
     pass
+
 # This will update all nearby enemies alongside load them in and out.
 # So we check where the player is and if an enemy should be their spawn it in if it's not done already.
 def updateEntities():
@@ -427,6 +448,10 @@ def updateEntities():
         if dist >= 60:
             sprites.destroy(playerProj)
             break
+
+    for ent in enemyList:
+        ent.update()
+
 
 def getEntityTexture(texID: number):
     if texID == 0:

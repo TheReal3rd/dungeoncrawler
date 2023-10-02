@@ -92,6 +92,28 @@ class EnemyEntityObject {
         this.___textureID = value
     }
     
+    static waypoint: number[]
+    private ___waypoint_is_set: boolean
+    private ___waypoint: number[]
+    get waypoint(): number[] {
+        return this.___waypoint_is_set ? this.___waypoint : EnemyEntityObject.waypoint
+    }
+    set waypoint(value: number[]) {
+        this.___waypoint_is_set = true
+        this.___waypoint = value
+    }
+    
+    static health: number
+    private ___health_is_set: boolean
+    private ___health: number
+    get health(): number {
+        return this.___health_is_set ? this.___health : EnemyEntityObject.health
+    }
+    set health(value: number) {
+        this.___health_is_set = true
+        this.___health = value
+    }
+    
     static pos: number[]
     private ___pos_is_set: boolean
     private ___pos: number[]
@@ -114,15 +136,15 @@ class EnemyEntityObject {
         this.___entSprite = value
     }
     
-    static waypoint: number[]
-    private ___waypoint_is_set: boolean
-    private ___waypoint: number[]
-    get waypoint(): number[] {
-        return this.___waypoint_is_set ? this.___waypoint : EnemyEntityObject.waypoint
+    static shouldDelete: boolean
+    private ___shouldDelete_is_set: boolean
+    private ___shouldDelete: boolean
+    get shouldDelete(): boolean {
+        return this.___shouldDelete_is_set ? this.___shouldDelete : EnemyEntityObject.shouldDelete
     }
-    set waypoint(value: number[]) {
-        this.___waypoint_is_set = true
-        this.___waypoint = value
+    set shouldDelete(value: boolean) {
+        this.___shouldDelete_is_set = true
+        this.___shouldDelete = value
     }
     
     static speed: number
@@ -136,17 +158,6 @@ class EnemyEntityObject {
         this.___speed = value
     }
     
-    static health: number
-    private ___health_is_set: boolean
-    private ___health: number
-    get health(): number {
-        return this.___health_is_set ? this.___health : EnemyEntityObject.health
-    }
-    set health(value: number) {
-        this.___health_is_set = true
-        this.___health = value
-    }
-    
     public static __initEnemyEntityObject() {
         EnemyEntityObject.pos = [0, 0]
         // Current position
@@ -156,13 +167,19 @@ class EnemyEntityObject {
         EnemyEntityObject.entSprite = null
         EnemyEntityObject.textureID = -1
         EnemyEntityObject.health = 0
+        EnemyEntityObject.shouldDelete = false
     }
     
     constructor(textureID: number) {
         this.textureID = textureID
+        // """En_Witch_Idle"""
+        this.waypoint = null
+        if (textureID == 0) {
+            this.health = 50
+        }
+        
     }
     
-    // """En_Witch_Idle"""
     public setPos(pos: number[]) {
         this.pos = pos
     }
@@ -172,10 +189,29 @@ class EnemyEntityObject {
     }
     
     public update() {
+        
         if (this.entSprite == null) {
+            this.shouldDelete = true
             return
         }
         
+        if (this.health <= 0) {
+            this.shouldDelete = true
+            this.entSprite.setFlag(SpriteFlag.AutoDestroy, false)
+            this.entSprite.destroy()
+            return
+        }
+        
+        this.doMovement()
+        let distToPlayer = calcDistance(this.pos[0], this.pos[1], playerOne.x, playerOne.y)
+        if (distToPlayer <= 4) {
+            
+        } else {
+            // TODO Attack the player.
+            
+        }
+        
+        // TODO add idle animations.
         this.entSprite.setPosition(this.pos[0], this.pos[1])
     }
     
@@ -207,7 +243,6 @@ class EnemyEntityObject {
         this.pos[1] = cy
     }
     
-    // self.entSprite.setPosition(cx, cy)
     public getSprite(): Sprite {
         return this.entSprite
     }
@@ -710,7 +745,7 @@ function onScreen() {
 // ## GUI END
 // ## Enemies Funcs START
 // Checks whether entities should spawn or not.
-function spawnCheck() {
+function spawnCheck(pos: any) {
     
 }
 
@@ -751,6 +786,9 @@ function updateEntities() {
             break
         }
         
+    }
+    for (let ent of enemyList) {
+        ent.update()
     }
 }
 
