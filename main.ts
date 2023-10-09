@@ -79,7 +79,8 @@ LvlDoorData.__initLvlDoorData()
 // 
 //  INFO
 //  0 = Witch_One
-// 
+//  1 = Iron_Golem
+//  2 = 
 class EnemyEntityObject {
     static textureID: number
     private ___textureID_is_set: boolean
@@ -147,6 +148,17 @@ class EnemyEntityObject {
         this.___shouldDelete = value
     }
     
+    static attackDelay: msDelay
+    private ___attackDelay_is_set: boolean
+    private ___attackDelay: msDelay
+    get attackDelay(): msDelay {
+        return this.___attackDelay_is_set ? this.___attackDelay : EnemyEntityObject.attackDelay
+    }
+    set attackDelay(value: msDelay) {
+        this.___attackDelay_is_set = true
+        this.___attackDelay = value
+    }
+    
     static speed: number
     private ___speed_is_set: boolean
     private ___speed: number
@@ -168,6 +180,7 @@ class EnemyEntityObject {
         EnemyEntityObject.textureID = -1
         EnemyEntityObject.health = 0
         EnemyEntityObject.shouldDelete = false
+        EnemyEntityObject.attackDelay = new msDelay()
     }
     
     constructor(textureID: number) {
@@ -189,6 +202,10 @@ class EnemyEntityObject {
     }
     
     public update() {
+        let angle: number;
+        let velX: number;
+        let velY: number;
+        let projectile: Sprite;
         
         if (this.entSprite == null) {
             this.shouldDelete = true
@@ -204,14 +221,22 @@ class EnemyEntityObject {
         
         this.doMovement()
         let distToPlayer = calcDistance(this.pos[0], this.pos[1], playerOne.x, playerOne.y)
-        if (distToPlayer <= 4) {
+        if (distToPlayer <= 50) {
+            if (this.attackDelay.passedMS(550)) {
+                angle = calcAngle(this.pos[0], this.pos[1], playerOne.x, playerOne.y)
+                velX = Math.sin(toRadians(angle)) * 95
+                velY = Math.cos(toRadians(angle)) * 95
+                // TODO change this from projectile to sprite.
+                projectile = sprites.createProjectileFromSprite(assets.image`Witch_Attack`, this.entSprite, -velX, -velY)
+            }
             
-        } else {
-            // TODO Attack the player.
+        } else if (distToPlayer <= 70) {
+            if (distToPlayer >= 20 || distToPlayer >= 60) {
+                
+            }
             
         }
         
-        // TODO add idle animations.
         this.entSprite.setPosition(this.pos[0], this.pos[1])
     }
     
@@ -925,6 +950,48 @@ function spriteToScreen(textSprite: Sprite): number[] {
     //  tile_size * map_size - (X_range or Y_range)
     //  So no real point making it dynamic as you can't. (So i made it dynamic. :D)
     return [clamp(80, 16 * levelSizes[levelID] - 80, playerOne.x) - (scene.screenWidth() - textSprite.width) / 2, clamp(60, 16 * levelSizes[levelID] - 60, playerOne.y) - (scene.screenHeight() - textSprite.height) / 2]
+}
+
+// Ensures the given angle is within the limits.
+function wrapDegrees(degrees: number): number {
+    let d = degrees % 360
+    if (d >= 180.0) {
+        d -= 360.0
+    }
+    
+    if (d < -180.0) {
+        d += 360.0
+    }
+    
+    return d
+}
+
+// Converts radians to degrees.
+function toDegrees(radians: number): number {
+    return radians * 57.29577951308232
+}
+
+// Calculates the angle from one position to another.
+function calcAngle(fromPosX: number, fromPosY: number, toPosX: number, toPosY: number): number {
+    let xDiff = fromPosX - toPosX
+    let yDiff = fromPosY - toPosY
+    return wrapDegrees(toDegrees(Math.atan2(xDiff, yDiff)))
+}
+
+function raycast(fromPosX: number, fromPosY: number, toPosX: number, toPosY: number) {
+    let currentPosX = fromPosX
+    let currentPosY = fromPosY
+    let steps = 0
+    let angle = calcAngle(fromPosX, fromPosY, toPosX, toPosY)
+    let distance = calcDistance(fromPosX, fromPosY, toPosX, toPosY)
+    let sin = Math.sin(toRadians(angle))
+    let cos = Math.cos(toRadians(angle))
+    // TODO finish the raycast.
+    
+}
+
+function toRadians(degrees: number): number {
+    return degrees * Math.PI / 180
 }
 
 // ## Maths Funcs END

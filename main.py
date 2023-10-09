@@ -36,7 +36,8 @@ class LvlDoorData():
 #
 # INFO
 # 0 = Witch_One
-#
+# 1 = Iron_Golem
+# 2 = 
 class EnemyEntityObject():
     pos = (0,0)#Current position
     waypoint = (-1, -1)#Waypoint Where its moving too.
@@ -45,6 +46,7 @@ class EnemyEntityObject():
     textureID: number = -1
     health = 0
     shouldDelete = False
+    attackDelay = msDelay()
 
     def __init__(textureID):
       self.textureID = textureID #"""En_Witch_Idle"""
@@ -52,7 +54,6 @@ class EnemyEntityObject():
       if textureID == 0:
           self.health = 50
         
-
     def setPos(self, pos):
         self.pos = pos
 
@@ -74,10 +75,18 @@ class EnemyEntityObject():
         self.doMovement()
 
         distToPlayer = calcDistance(self.pos[0], self.pos[1], playerOne.x, playerOne.y)
-        if distToPlayer <= 4:
-            pass #TODO Attack the player.
+        if (distToPlayer <= 50):
+            if(self.attackDelay.passedMS(550)):
+                angle = calcAngle(self.pos[0], self.pos[1], playerOne.x, playerOne.y)
+                velX = Math.sin(toRadians(angle)) * 95
+                velY = Math.cos(toRadians(angle)) * 95
+                #TODO change this from projectile to sprite.
+                projectile = sprites.create_projectile_from_sprite(assets.image("""Witch_Attack"""), self.entSprite, -velX, -velY)
         else:
-            pass #TODO add idle animations.
+            if(distToPlayer <= 70):
+                if (distToPlayer >= 20 or distToPlayer >= 60):
+
+                    pass
 
         self.entSprite.setPosition(self.pos[0], self.pos[1])
 
@@ -573,6 +582,38 @@ def spriteToScreen(textSprite: Sprite):
     # So no real point making it dynamic as you can't. (So i made it dynamic. :D)
     return [clamp(80, (16 * levelSizes[levelID]) - 80 , playerOne.x) - (scene.screen_width() - textSprite.width) / 2,
         clamp(60, (16 * levelSizes[levelID]) - 60, playerOne.y) - (scene.screen_height() - textSprite.height) / 2]
+#Ensures the given angle is within the limits.
+def wrapDegrees(degrees):
+    d = degrees % 360
+    if d >= 180.0:
+        d -= 360.0
+    if d < -180.0:
+        d += 360.0
+    return d
+#Converts radians to degrees.
+def toDegrees(radians):
+    return radians * 57.29577951308232
+#Calculates the angle from one position to another.
+def calcAngle(fromPosX, fromPosY, toPosX, toPosY):
+    xDiff = fromPosX - toPosX
+    yDiff = fromPosY - toPosY
+    return wrapDegrees(toDegrees(Math.atan2(xDiff, yDiff)))
+
+def raycast(fromPosX, fromPosY, toPosX, toPosY):
+    currentPosX = fromPosX
+    currentPosY = fromPosY
+    steps = 0
+    
+    angle = calcAngle(fromPosX, fromPosY, toPosX, toPosY)
+    distance = calcDistance(fromPosX, fromPosY, toPosX, toPosY)
+    
+    sin = Math.sin(toRadians(angle))
+    cos = Math.cos(toRadians(angle))
+    #TODO finish the raycast.
+    pass
+
+def toRadians(degrees):
+    return degrees * Math.PI / 180
 ### Maths Funcs END
 
 

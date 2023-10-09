@@ -647,6 +647,18 @@ d 1 1 d .
 ........eb......................
 ................................
 `;
+            case "image31":
+            case "Witch_Attack":return img`
+. . . . b b . . . . 
+. . . b 5 5 b . . . 
+b b b 5 5 1 1 b b b 
+b 5 5 5 5 1 1 5 5 b 
+. b d 5 5 5 5 d b . 
+. c b 5 5 5 5 b c . 
+. c 5 d d d d 5 c . 
+. c 5 d c c d 5 c . 
+. c c c . . c c c . 
+`;
         }
         return null;
     })

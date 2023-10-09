@@ -149,6 +149,11 @@
         "mimeType": "image/x-mkcd-f4",
         "displayName": "CrossbowItem"
     },
+    "image31": {
+        "data": "hwQKAAkAAAAAuwAAAAAAAABby8wMAAAAAFu9VQwAAACwVVXdDAAAAFtVVc0AAAAAWxFVzQAAAACwEVXdDAAAAABbvVUMAAAAAFvLzAwAAAAAuwAAAAAAAA==",
+        "mimeType": "image/x-mkcd-f4",
+        "displayName": "Witch_Attack"
+    },
     "*": {
         "mimeType": "image/x-mkcd-f4",
         "dataEncoding": "base64",
