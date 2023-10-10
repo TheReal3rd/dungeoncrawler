@@ -10,7 +10,7 @@
 #Holds Level Door Data that can be iterated through.
 class LvlDoorData():
     pos = (0, 0)
-    lvlID = 0#Some reason i can't set it to -1 just errors out. ¬_¬
+    lvlID = -1
     playerPos = (0, 0)
 
     def __init__(pos, lvlID, playerPos):
@@ -61,7 +61,7 @@ class EnemyEntityObject():
         return self.pos
 
     def update(self):
-        global playerOne
+        global playerOne, levelSizes, levelID
         if self.entSprite == None:
             self.shouldDelete = True
             return
@@ -83,15 +83,40 @@ class EnemyEntityObject():
                 #TODO change this from projectile to sprite.
                 projectile = sprites.create_projectile_from_sprite(assets.image("""Witch_Attack"""), self.entSprite, -velX, -velY)
         else:
-            if(distToPlayer <= 70):
-                if (distToPlayer >= 20 or distToPlayer >= 60):
+            if(distToPlayer <= 70 and self.waypoint == None):
+                if (distToPlayer >= 20):
+                    #So we going to scan the area. And use raycast to ensure we can move from the current position to the next.
+                    #This is done to ensure the enemy can see where they're moving to.
+                    #This is all done by tiles. They're 16x16 so dvide by 16.
+                    prevDist = 1000
+                    closestTile = None
+                    for x in range(-5, 5):
+                        for y in range(-5, 5):
+                            newPos = ((self.pos[0] / 16) + x, (self.pos[1] / 16) + y)
+                         
+                            #Dist
+                            distToPlayer = calcDistance(newPos[0], newPos[1], playerOne.x / 16, playerOne.y / 16)
 
-                    pass
+                            #Raycast
+                            angle = calcAngle(self.pos[0] / 16, self.pos[1] / 16, newPos[0], newPos[1])
+                            distToPos = calcDistance(self.pos[0] / 16, self.pos[1] / 16, newPos[0], newPos[1])
+                            result = raycastTileMap(self.pos[0], self.pos[1], angle, distToPos)
+
+                            if(result.getHitType() != 0):
+                                continue
+
+                            if distToPlayer < prevDist:
+                                prevDist = distToPlayer
+                                closestTile = newPos
+
+                    if prevDist != 1000 or closestTile != None:
+                        self.waypoint = (closestTile[0] * 16, closestTile[1] * 16)
+                        print(self.waypoint)
 
         self.entSprite.setPosition(self.pos[0], self.pos[1])
 
 
-    def doMovement(self):
+    def doMovement(self):#TODO change this from direct position to velocity.
         if self.entSprite == None or self.waypoint == None:
             return
 
@@ -109,6 +134,8 @@ class EnemyEntityObject():
                 cy += self.speed
             elif cy > wy:
                 cy -= self.speed
+        else:
+            self.waypoint = None
         self.pos[0] = cx
         self.pos[1] = cy
 
@@ -145,6 +172,31 @@ class EnemySpawnPointData():
 
     def getNameID(self):
         return self.nameID
+
+#Hit result codes
+# 0 = None
+# 1 = wall
+# 2 = Entities
+class RaycastResult():
+    pos = (0,0)
+    hitType = 0
+    origin = (0,0)
+
+    def __init__(origin, pos, hitType):
+        self.pos = pos
+        self.origin = origin
+        self.hitType = hitType
+
+    def getHitType(self):
+        return self.hitType
+
+    def getPos(self):
+        return self.pos
+
+    def getOrigin(self):
+        return self.origin
+
+
 
 # Main instructions / Important stuff
 def executeAction(actionID: number):
@@ -184,6 +236,9 @@ def executeAction(actionID: number):
                     useItem(itemID2)
                     playerInventory[x3] = 0
                     break
+    elif actionID == 3:
+        result = raycastTileMap(playerOne.x, playerOne.y, 45, 10)
+        print(result.getHitType())
 
 class msDelay():#This breaks blocks. and its annoying.
     time = 0
@@ -283,7 +338,7 @@ def updatePlayer():
             if actionSwapDelay.passedMS(500):
                 if prompter == None:
                     actionSelectIndex += 1
-                    if actionSelectIndex >= 3:
+                    if actionSelectIndex >= actionsStrings.length:
                         actionSelectIndex = 0
                     playerAction.destroy()
                     playerAction = textsprite.create(actionsStrings[actionSelectIndex], 10, 15)
@@ -598,20 +653,46 @@ def calcAngle(fromPosX, fromPosY, toPosX, toPosY):
     xDiff = fromPosX - toPosX
     yDiff = fromPosY - toPosY
     return wrapDegrees(toDegrees(Math.atan2(xDiff, yDiff)))
-
-def raycast(fromPosX, fromPosY, toPosX, toPosY):
-    currentPosX = fromPosX
-    currentPosY = fromPosY
-    steps = 0
-    
-    angle = calcAngle(fromPosX, fromPosY, toPosX, toPosY)
-    distance = calcDistance(fromPosX, fromPosY, toPosX, toPosY)
+#Shoots a raycast from a position. using angle and distance limiter. (TileMap)
+def raycastTileMap(posX, posY, angle, distance):
+    currentPosX = posX / 16
+    currentPosY = posY / 16
+    step = 0
     
     sin = Math.sin(toRadians(angle))
     cos = Math.cos(toRadians(angle))
-    #TODO finish the raycast.
-    pass
+    toPos = (currentPosX + (distance * cos), currentPosY + (distance * sin))
 
+    while step != distance:
+        currentPosX += 1 * cos
+        currentPosY += 1 * sin
+        step += 1
+
+        if(tiles.tile_at_location_is_wall(tiles.get_tile_location(int(currentPosX), int(currentPosY)))):
+            return RaycastResult((posX, posY), (currentPosX, currentPosY), 1)
+    return RaycastResult((posX, posY), (currentPosX, currentPosY), 0)
+
+#Shoots a raycast from a position. using angle and distance limiter.
+def raycast(posX, posY, angle, distance, spriteKind):
+    currentPosX = posX
+    currentPosY = posY
+    step = 0
+    
+    sin = Math.sin(toRadians(angle))
+    cos = Math.cos(toRadians(angle))
+    toPos = (currentPosX + (distance * cos), currentPosY + (distance * sin))
+
+    while step != distance:
+        currentPosX += 1 * cos
+        currentPosY += 1 * sin
+        step += 1
+
+        print(currentPosX+" "+currentPosY+" | "+step)
+
+        #TODO add objects return.
+    return RaycastResult((posX, posY), (currentPosX, currentPosY), 0)
+
+#Converts degrees to radians.
 def toRadians(degrees):
     return degrees * Math.PI / 180
 ### Maths Funcs END
@@ -666,7 +747,7 @@ playerInventory = [3, 1, 2, 5]
 
 # Action START
 actionSelectIndex = 0
-actionsStrings = ["Inventory", "Attack", "Health Item"]
+actionsStrings = ["Inventory", "Attack", "Health Item", "TEST Raycast"]
 actionSwapDelay = msDelay()
 # Action END
 

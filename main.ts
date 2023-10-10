@@ -43,8 +43,7 @@ class LvlDoorData {
     
     public static __initLvlDoorData() {
         LvlDoorData.pos = [0, 0]
-        LvlDoorData.lvlID = 0
-        // Some reason i can't set it to -1 just errors out. ¬_¬
+        LvlDoorData.lvlID = -1
         LvlDoorData.playerPos = [0, 0]
     }
     
@@ -206,6 +205,11 @@ class EnemyEntityObject {
         let velX: number;
         let velY: number;
         let projectile: Sprite;
+        let prevDist: number;
+        let closestTile: number[];
+        let newPos: number[];
+        let distToPos: number;
+        let result: RaycastResult;
         
         if (this.entSprite == null) {
             this.shouldDelete = true
@@ -230,8 +234,37 @@ class EnemyEntityObject {
                 projectile = sprites.createProjectileFromSprite(assets.image`Witch_Attack`, this.entSprite, -velX, -velY)
             }
             
-        } else if (distToPlayer <= 70) {
-            if (distToPlayer >= 20 || distToPlayer >= 60) {
+        } else if (distToPlayer <= 70 && this.waypoint == null) {
+            if (distToPlayer >= 20) {
+                // So we going to scan the area. And use raycast to ensure we can move from the current position to the next.
+                // This is done to ensure the enemy can see where they're moving to.
+                // This is all done by tiles. They're 16x16 so dvide by 16.
+                prevDist = 1000
+                closestTile = null
+                for (let x = -5; x < 5; x++) {
+                    for (let y = -5; y < 5; y++) {
+                        newPos = [this.pos[0] / 16 + x, this.pos[1] / 16 + y]
+                        // Dist
+                        distToPlayer = calcDistance(newPos[0], newPos[1], playerOne.x / 16, playerOne.y / 16)
+                        // Raycast
+                        angle = calcAngle(this.pos[0] / 16, this.pos[1] / 16, newPos[0], newPos[1])
+                        distToPos = calcDistance(this.pos[0] / 16, this.pos[1] / 16, newPos[0], newPos[1])
+                        result = raycastTileMap(this.pos[0], this.pos[1], angle, distToPos)
+                        if (result.getHitType() != 0) {
+                            continue
+                        }
+                        
+                        if (distToPlayer < prevDist) {
+                            prevDist = distToPlayer
+                            closestTile = newPos
+                        }
+                        
+                    }
+                }
+                if (prevDist != 1000 || closestTile != null) {
+                    this.waypoint = [closestTile[0] * 16, closestTile[1] * 16]
+                    console.log(this.waypoint)
+                }
                 
             }
             
@@ -241,6 +274,7 @@ class EnemyEntityObject {
     }
     
     public doMovement() {
+        // TODO change this from direct position to velocity.
         if (this.entSprite == null || this.waypoint == null) {
             return
         }
@@ -262,6 +296,8 @@ class EnemyEntityObject {
                 cy -= this.speed
             }
             
+        } else {
+            this.waypoint = null
         }
         
         this.pos[0] = cx
@@ -363,12 +399,79 @@ class EnemySpawnPointData {
 
 EnemySpawnPointData.__initEnemySpawnPointData()
 
+// Hit result codes
+//  0 = None
+//  1 = wall
+//  2 = Entities
+class RaycastResult {
+    static pos: number[]
+    private ___pos_is_set: boolean
+    private ___pos: number[]
+    get pos(): number[] {
+        return this.___pos_is_set ? this.___pos : RaycastResult.pos
+    }
+    set pos(value: number[]) {
+        this.___pos_is_set = true
+        this.___pos = value
+    }
+    
+    static origin: number[]
+    private ___origin_is_set: boolean
+    private ___origin: number[]
+    get origin(): number[] {
+        return this.___origin_is_set ? this.___origin : RaycastResult.origin
+    }
+    set origin(value: number[]) {
+        this.___origin_is_set = true
+        this.___origin = value
+    }
+    
+    static hitType: number
+    private ___hitType_is_set: boolean
+    private ___hitType: number
+    get hitType(): number {
+        return this.___hitType_is_set ? this.___hitType : RaycastResult.hitType
+    }
+    set hitType(value: number) {
+        this.___hitType_is_set = true
+        this.___hitType = value
+    }
+    
+    public static __initRaycastResult() {
+        RaycastResult.pos = [0, 0]
+        RaycastResult.hitType = 0
+        RaycastResult.origin = [0, 0]
+    }
+    
+    constructor(origin: number[], pos: number[], hitType: number) {
+        this.pos = pos
+        this.origin = origin
+        this.hitType = hitType
+    }
+    
+    public getHitType(): number {
+        return this.hitType
+    }
+    
+    public getPos(): number[] {
+        return this.pos
+    }
+    
+    public getOrigin(): number[] {
+        return this.origin
+    }
+    
+}
+
+RaycastResult.__initRaycastResult()
+
 //  Main instructions / Important stuff
 function executeAction(actionID: number) {
     let projVel: number[];
     let projImage: Image;
     let playerProj: Sprite;
     let itemID2: number;
+    let result: RaycastResult;
     
     if (actionID == 0) {
         //  Inventory
@@ -416,6 +519,9 @@ function executeAction(actionID: number) {
             }
             
         }
+    } else if (actionID == 3) {
+        result = raycastTileMap(playerOne.x, playerOne.y, 45, 10)
+        console.log(result.getHitType())
     }
     
 }
@@ -579,7 +685,7 @@ function updatePlayer() {
             if (actionSwapDelay.passedMS(500)) {
                 if (prompter == null) {
                     actionSelectIndex += 1
-                    if (actionSelectIndex >= 3) {
+                    if (actionSelectIndex >= actionsStrings.length) {
                         actionSelectIndex = 0
                     }
                     
@@ -978,18 +1084,45 @@ function calcAngle(fromPosX: number, fromPosY: number, toPosX: number, toPosY: n
     return wrapDegrees(toDegrees(Math.atan2(xDiff, yDiff)))
 }
 
-function raycast(fromPosX: number, fromPosY: number, toPosX: number, toPosY: number) {
-    let currentPosX = fromPosX
-    let currentPosY = fromPosY
-    let steps = 0
-    let angle = calcAngle(fromPosX, fromPosY, toPosX, toPosY)
-    let distance = calcDistance(fromPosX, fromPosY, toPosX, toPosY)
+// Shoots a raycast from a position. using angle and distance limiter. (TileMap)
+function raycastTileMap(posX: number, posY: number, angle: number, distance: number): RaycastResult {
+    let currentPosX = posX / 16
+    let currentPosY = posY / 16
+    let step = 0
     let sin = Math.sin(toRadians(angle))
     let cos = Math.cos(toRadians(angle))
-    // TODO finish the raycast.
-    
+    let toPos = [currentPosX + distance * cos, currentPosY + distance * sin]
+    while (step != distance) {
+        currentPosX += 1 * cos
+        currentPosY += 1 * sin
+        step += 1
+        if (tiles.tileAtLocationIsWall(tiles.getTileLocation(Math.trunc(currentPosX), Math.trunc(currentPosY)))) {
+            return new RaycastResult([posX, posY], [currentPosX, currentPosY], 1)
+        }
+        
+    }
+    return new RaycastResult([posX, posY], [currentPosX, currentPosY], 0)
 }
 
+// Shoots a raycast from a position. using angle and distance limiter.
+function raycast(posX: any, posY: any, angle: number, distance: number, spriteKind: any): RaycastResult {
+    let currentPosX = posX
+    let currentPosY = posY
+    let step = 0
+    let sin = Math.sin(toRadians(angle))
+    let cos = Math.cos(toRadians(angle))
+    let toPos = [currentPosX + distance * cos, currentPosY + distance * sin]
+    while (step != distance) {
+        currentPosX += 1 * cos
+        currentPosY += 1 * sin
+        step += 1
+        console.log(currentPosX + " " + currentPosY + " | " + step)
+    }
+    // TODO add objects return.
+    return new RaycastResult([posX, posY], [currentPosX, currentPosY], 0)
+}
+
+// Converts degrees to radians.
 function toRadians(degrees: number): number {
     return degrees * Math.PI / 180
 }
@@ -1019,7 +1152,7 @@ let playerInventory = [3, 1, 2, 5]
 // Inventory END
 //  Action START
 let actionSelectIndex = 0
-let actionsStrings = ["Inventory", "Attack", "Health Item"]
+let actionsStrings = ["Inventory", "Attack", "Health Item", "TEST Raycast"]
 let actionSwapDelay = new msDelay()
 //  Action END
 //  Sprites START
