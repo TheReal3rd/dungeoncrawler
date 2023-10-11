@@ -1,5 +1,5 @@
 //  TODO list:
-//  1. Create enemies. (Multiple types with different behaviour) (Spawn logic done tracking not done.)
+//  1. Create enemies. (Spawning, Movement and attacking is done.)
 //  2. Create Levels. -> TODO create more levels then.
 //  3. Add player stats attack, defense and more.
 //  Low Prio list:
@@ -147,13 +147,13 @@ class EnemyEntityObject {
         this.___shouldDelete = value
     }
     
-    static attackDelay: msDelay
+    static attackDelay: number
     private ___attackDelay_is_set: boolean
-    private ___attackDelay: msDelay
-    get attackDelay(): msDelay {
+    private ___attackDelay: number
+    get attackDelay(): number {
         return this.___attackDelay_is_set ? this.___attackDelay : EnemyEntityObject.attackDelay
     }
-    set attackDelay(value: msDelay) {
+    set attackDelay(value: number) {
         this.___attackDelay_is_set = true
         this.___attackDelay = value
     }
@@ -171,17 +171,16 @@ class EnemyEntityObject {
     
     public static __initEnemyEntityObject() {
         EnemyEntityObject.pos = [0, 0]
-        // Current position
         EnemyEntityObject.waypoint = [-1, -1]
-        // Waypoint Where its moving too.
         EnemyEntityObject.speed = 1
         EnemyEntityObject.entSprite = null
         EnemyEntityObject.textureID = -1
         EnemyEntityObject.health = 0
         EnemyEntityObject.shouldDelete = false
-        EnemyEntityObject.attackDelay = new msDelay()
+        EnemyEntityObject.attackDelay = 0
     }
     
+    // Sum reason using msDelay doesn't work? Like it only allows one enemy to shoot at a time.
     constructor(textureID: number) {
         this.textureID = textureID
         // """En_Witch_Idle"""
@@ -204,7 +203,7 @@ class EnemyEntityObject {
         let angle: number;
         let velX: number;
         let velY: number;
-        let projectile: Sprite;
+        let temp: Sprite;
         let prevDist: number;
         let closestTile: number[];
         let newPos: number[];
@@ -226,15 +225,21 @@ class EnemyEntityObject {
         this.doMovement()
         let distToPlayer = calcDistance(this.pos[0], this.pos[1], playerOne.x, playerOne.y)
         if (distToPlayer <= 50) {
-            if (this.attackDelay.passedMS(550)) {
+            if (this.attackDelay >= 25) {
                 angle = calcAngle(this.pos[0], this.pos[1], playerOne.x, playerOne.y)
                 velX = Math.sin(toRadians(angle)) * 95
                 velY = Math.cos(toRadians(angle)) * 95
-                // TODO change this from projectile to sprite.
-                projectile = sprites.createProjectileFromSprite(assets.image`Witch_Attack`, this.entSprite, -velX, -velY)
+                temp = sprites.create(assets.image`Witch_Attack`, SpriteKind.Projectile)
+                temp.setPosition(this.pos[0], this.pos[1])
+                temp.setVelocity(-velX, -velY)
+                temp.setFlag(SpriteFlag.AutoDestroy, true)
+                temp.setFlag(SpriteFlag.DestroyOnWall, true)
+                this.attackDelay = 0
+            } else {
+                this.attackDelay += 1
             }
             
-        } else if (distToPlayer <= 70 && this.waypoint == null) {
+        } else if (distToPlayer <= 80 && this.waypoint == null) {
             if (distToPlayer >= 20) {
                 // So we going to scan the area. And use raycast to ensure we can move from the current position to the next.
                 // This is done to ensure the enemy can see where they're moving to.
@@ -365,18 +370,31 @@ class EnemySpawnPointData {
         this.___nameID = value
     }
     
+    static spawnRadius: number
+    private ___spawnRadius_is_set: boolean
+    private ___spawnRadius: number
+    get spawnRadius(): number {
+        return this.___spawnRadius_is_set ? this.___spawnRadius : EnemySpawnPointData.spawnRadius
+    }
+    set spawnRadius(value: number) {
+        this.___spawnRadius_is_set = true
+        this.___spawnRadius = value
+    }
+    
     public static __initEnemySpawnPointData() {
         EnemySpawnPointData.nameID = ""
         EnemySpawnPointData.pos = [0, 0]
         EnemySpawnPointData.trigDist = 0
         EnemySpawnPointData.enemiesList = []
+        EnemySpawnPointData.spawnRadius = 0
     }
     
-    constructor(nameID: string, pos: number[], trigDist: number, enemiesList: number[]) {
+    constructor(nameID: string, pos: number[], trigDist: number, spawnRadius: number, enemiesList: number[]) {
         this.pos = pos
         this.trigDist = trigDist
         this.enemiesList = enemiesList
         this.nameID = nameID
+        this.spawnRadius = spawnRadius
     }
     
     public getPos(): number[] {
@@ -393,6 +411,10 @@ class EnemySpawnPointData {
     
     public getNameID(): string {
         return this.nameID
+    }
+    
+    public getSpawnRadius(): number {
+        return this.spawnRadius
     }
     
 }
@@ -875,11 +897,6 @@ function onScreen() {
 
 // ## GUI END
 // ## Enemies Funcs START
-// Checks whether entities should spawn or not.
-function spawnCheck(pos: any) {
-    
-}
-
 //  This will update all nearby enemies alongside load them in and out.
 //  So we check where the player is and if an enemy should be their spawn it in if it's not done already.
 function updateEntities() {
@@ -969,7 +986,7 @@ function getLevelEnemyData(): EnemySpawnPointData[] {
     
     // #Level 1 (0) will have no enemies.
     if (levelID == 1) {
-        return [new EnemySpawnPointData("HallWay1", [5, 12], 6, [0])]
+        return [new EnemySpawnPointData("HallWay1", [5, 12], 8, 4, [0, 0])]
     } else {
         return []
     }
@@ -1005,13 +1022,19 @@ function updateLevel() {
             for (let eid of z.getEnemiesList()) {
                 // Create the new sprite and add to the entity list.
                 temp = new EnemyEntityObject(eid)
-                pos = [tilePos[0] * 16, tilePos[1] * 16]
+                while (true) {
+                    pos = [Math.floor((tilePos[0] + randint(-z.getSpawnRadius(), z.getSpawnRadius())) * 16), Math.floor((tilePos[1] + randint(-z.getSpawnRadius(), z.getSpawnRadius())) * 16)]
+                    if (!tiles.tileAtLocationIsWall(tiles.getTileLocation(pos[0] / 16, pos[1] / 16))) {
+                        break
+                    }
+                    
+                }
                 temp.setPos(pos)
                 temp.spawnToWorld()
                 temp.update()
                 enemyList.push(temp)
-                spawnedAreas.push(z.getNameID())
             }
+            spawnedAreas.push(z.getNameID())
         }
         
     }
@@ -1084,6 +1107,10 @@ function calcAngle(fromPosX: number, fromPosY: number, toPosX: number, toPosY: n
     return wrapDegrees(toDegrees(Math.atan2(xDiff, yDiff)))
 }
 
+function movementVelocity(fromPosX: number, fromPosY: number, toPosX: number, toPosY: number) {
+    let angle = calcAngle(fromPosX, fromPosY, toPosX, toPosY)
+}
+
 // Shoots a raycast from a position. using angle and distance limiter. (TileMap)
 function raycastTileMap(posX: number, posY: number, angle: number, distance: number): RaycastResult {
     let currentPosX = posX / 16
@@ -1130,7 +1157,8 @@ function toRadians(degrees: number): number {
 // ## Maths Funcs END
 // Level info START
 let levelSizes = [50, 26]
-let levelID = 0
+let levelID = 1
+// TODO remember to set back to 0 when done.
 let spawnedAreas : String[] = []
 // Yes kinda cringe but a bool didn't work. So this stores the NameID of areas that have spawned its enemies.
 let enemyList : EnemyEntityObject[] = []
@@ -1182,10 +1210,12 @@ scene.setBackgroundColor(2)
 game.stats = true
 info.setLife(3)
 scene.cameraFollowSprite(playerOne)
-playerOne.setPosition(0, 261)
+playerOne.setPosition(40, 40)
+// Original 0, 261
 //  Vars MUL END
 //  Intro Vars and Funcs START
-let introComplete = false
+let introComplete = true
+// TODO set to original
 function updateIntro() {
     // 21
     

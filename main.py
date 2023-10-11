@@ -1,5 +1,5 @@
 # TODO list:
-# 1. Create enemies. (Multiple types with different behaviour) (Spawn logic done tracking not done.)
+# 1. Create enemies. (Spawning, Movement and attacking is done.)
 # 2. Create Levels. -> TODO create more levels then.
 # 3. Add player stats attack, defense and more.
 # Low Prio list:
@@ -39,14 +39,14 @@ class LvlDoorData():
 # 1 = Iron_Golem
 # 2 = 
 class EnemyEntityObject():
-    pos = (0,0)#Current position
-    waypoint = (-1, -1)#Waypoint Where its moving too.
+    pos = (0,0)
+    waypoint = (-1, -1)
     speed = 1
     entSprite = None
     textureID: number = -1
     health = 0
     shouldDelete = False
-    attackDelay = msDelay()
+    attackDelay = 0#Sum reason using msDelay doesn't work? Like it only allows one enemy to shoot at a time.
 
     def __init__(textureID):
       self.textureID = textureID #"""En_Witch_Idle"""
@@ -72,18 +72,26 @@ class EnemyEntityObject():
             self.entSprite.destroy()
             return
         
+        
         self.doMovement()
-
+        
         distToPlayer = calcDistance(self.pos[0], self.pos[1], playerOne.x, playerOne.y)
         if (distToPlayer <= 50):
-            if(self.attackDelay.passedMS(550)):
+            if(self.attackDelay >= 25):
                 angle = calcAngle(self.pos[0], self.pos[1], playerOne.x, playerOne.y)
                 velX = Math.sin(toRadians(angle)) * 95
                 velY = Math.cos(toRadians(angle)) * 95
-                #TODO change this from projectile to sprite.
-                projectile = sprites.create_projectile_from_sprite(assets.image("""Witch_Attack"""), self.entSprite, -velX, -velY)
+
+                temp = sprites.create(assets.image("""Witch_Attack"""), SpriteKind.projectile)
+                temp.set_position(self.pos[0], self.pos[1])
+                temp.set_velocity(-velX, -velY)
+                temp.set_flag(SpriteFlag.AUTO_DESTROY, True)
+                temp.set_flag(SpriteFlag.DESTROY_ON_WALL, True)
+                self.attackDelay = 0
+            else:
+                self.attackDelay +=1
         else:
-            if(distToPlayer <= 70 and self.waypoint == None):
+            if(distToPlayer <= 80 and self.waypoint == None):
                 if (distToPlayer >= 20):
                     #So we going to scan the area. And use raycast to ensure we can move from the current position to the next.
                     #This is done to ensure the enemy can see where they're moving to.
@@ -154,12 +162,14 @@ class EnemySpawnPointData():
     pos = (0,0)
     trigDist = 0
     enemiesList = []
+    spawnRadius = 0
 
-    def __init__(nameID, pos, trigDist, enemiesList):
+    def __init__(nameID, pos, trigDist, spawnRadius, enemiesList):
         self.pos = pos
         self.trigDist = trigDist
         self.enemiesList = enemiesList
         self.nameID = nameID
+        self.spawnRadius = spawnRadius
 
     def getPos(self):
         return self.pos
@@ -172,6 +182,9 @@ class EnemySpawnPointData():
 
     def getNameID(self):
         return self.nameID
+
+    def getSpawnRadius(self):
+        return self.spawnRadius
 
 #Hit result codes
 # 0 = None
@@ -195,8 +208,6 @@ class RaycastResult():
 
     def getOrigin(self):
         return self.origin
-
-
 
 # Main instructions / Important stuff
 def executeAction(actionID: number):
@@ -482,10 +493,6 @@ def onScreen():
 
 
 ### Enemies Funcs START
-#Checks whether entities should spawn or not.
-def spawnCheck(pos):
-    pass
-
 # This will update all nearby enemies alongside load them in and out.
 # So we check where the player is and if an enemy should be their spawn it in if it's not done already.
 def updateEntities():
@@ -568,7 +575,7 @@ def getLevelEnemyData():#No point to add Cache as its called once anyway. So the
     ##Level 1 (0) will have no enemies.
     if levelID == 1:
         return [
-            EnemySpawnPointData("HallWay1", (5,12), 6, [0])
+            EnemySpawnPointData("HallWay1", (5,12), 8, 4, [0,0])
         ]
     else:
         return []
@@ -596,13 +603,21 @@ def updateLevel():
 
                 #Create the new sprite and add to the entity list.
                 temp = EnemyEntityObject(eid)
-                pos = (tilePos[0] * 16, tilePos[1] * 16)
+
+                while True:
+                    pos = (
+                        Math.floor((tilePos[0] + randint(-z.getSpawnRadius(), z.getSpawnRadius())) * 16), 
+                        Math.floor((tilePos[1] + randint(-z.getSpawnRadius(), z.getSpawnRadius())) * 16)
+                        )
+                    if not tiles.tile_at_location_is_wall(tiles.get_tile_location(pos[0] / 16, pos[1] / 16)):
+                        break
+                
                 temp.setPos(pos)
                 temp.spawnToWorld()
                 temp.update()
 
                 enemyList.append(temp)
-                spawnedAreas.append(z.getNameID())
+            spawnedAreas.append(z.getNameID())
 
 def destroyAllEntities():
     global enemyList
@@ -653,6 +668,12 @@ def calcAngle(fromPosX, fromPosY, toPosX, toPosY):
     xDiff = fromPosX - toPosX
     yDiff = fromPosY - toPosY
     return wrapDegrees(toDegrees(Math.atan2(xDiff, yDiff)))
+
+def movementVelocity(fromPosX, fromPosY, toPosX, toPosY):
+    angle = calcAngle(fromPosX, fromPosY, toPosX, toPosY)
+    
+
+
 #Shoots a raycast from a position. using angle and distance limiter. (TileMap)
 def raycastTileMap(posX, posY, angle, distance):
     currentPosX = posX / 16
@@ -701,7 +722,7 @@ def toRadians(degrees):
 
 #Level info START
 levelSizes = [ 50, 26 ]
-levelID = 0
+levelID = 1#TODO remember to set back to 0 when done.
 spawnedAreas: List[String] = []#Yes kinda cringe but a bool didn't work. So this stores the NameID of areas that have spawned its enemies.
 enemyList: List[EnemyEntityObject] = []
 droppedItemsTable = [["", "0"]]
@@ -798,13 +819,13 @@ scene.set_background_color(2)
 game.stats = True
 info.set_life(3)
 scene.camera_follow_sprite(playerOne)
-playerOne.setPosition(0, 261)
+playerOne.setPosition(40, 40) #Original 0, 261
 # Vars MUL END
 
 
 
 # Intro Vars and Funcs START
-introComplete = False
+introComplete = True#TODO set to original
 
 def updateIntro():#21
     global introComplete, playerFrameIndex, playerAnimDelay, playerOne
