@@ -158,6 +158,17 @@ class EnemyEntityObject {
         this.___attackDelay = value
     }
     
+    static vel: number[]
+    private ___vel_is_set: boolean
+    private ___vel: number[]
+    get vel(): number[] {
+        return this.___vel_is_set ? this.___vel : EnemyEntityObject.vel
+    }
+    set vel(value: number[]) {
+        this.___vel_is_set = true
+        this.___vel = value
+    }
+    
     static speed: number
     private ___speed_is_set: boolean
     private ___speed: number
@@ -170,7 +181,8 @@ class EnemyEntityObject {
     }
     
     public static __initEnemyEntityObject() {
-        EnemyEntityObject.pos = [0, 0]
+        EnemyEntityObject.pos = null
+        EnemyEntityObject.vel = [0, 0]
         EnemyEntityObject.waypoint = [-1, -1]
         EnemyEntityObject.speed = 1
         EnemyEntityObject.entSprite = null
@@ -196,7 +208,7 @@ class EnemyEntityObject {
     }
     
     public getPos(): number[] {
-        return this.pos
+        return [this.entSprite.x, this.entSprite.y]
     }
     
     public update() {
@@ -207,6 +219,7 @@ class EnemyEntityObject {
         let prevDist: number;
         let closestTile: number[];
         let newPos: number[];
+        let tilePos: number[];
         let distToPos: number;
         let result: RaycastResult;
         
@@ -222,15 +235,16 @@ class EnemyEntityObject {
             return
         }
         
+        let pos = this.getPos()
         this.doMovement()
-        let distToPlayer = calcDistance(this.pos[0], this.pos[1], playerOne.x, playerOne.y)
+        let distToPlayer = calcDistance(pos[0], pos[1], playerOne.x, playerOne.y)
         if (distToPlayer <= 50) {
             if (this.attackDelay >= 25) {
-                angle = calcAngle(this.pos[0], this.pos[1], playerOne.x, playerOne.y)
+                angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
                 velX = Math.sin(toRadians(angle)) * 95
                 velY = Math.cos(toRadians(angle)) * 95
                 temp = sprites.create(assets.image`Witch_Attack`, SpriteKind.Projectile)
-                temp.setPosition(this.pos[0], this.pos[1])
+                temp.setPosition(pos[0], pos[1])
                 temp.setVelocity(-velX, -velY)
                 temp.setFlag(SpriteFlag.AutoDestroy, true)
                 temp.setFlag(SpriteFlag.DestroyOnWall, true)
@@ -248,13 +262,14 @@ class EnemyEntityObject {
                 closestTile = null
                 for (let x = -5; x < 5; x++) {
                     for (let y = -5; y < 5; y++) {
-                        newPos = [this.pos[0] / 16 + x, this.pos[1] / 16 + y]
+                        newPos = [pos[0] / 16 + x, pos[1] / 16 + y]
                         // Dist
                         distToPlayer = calcDistance(newPos[0], newPos[1], playerOne.x / 16, playerOne.y / 16)
                         // Raycast
-                        angle = calcAngle(this.pos[0] / 16, this.pos[1] / 16, newPos[0], newPos[1])
-                        distToPos = calcDistance(this.pos[0] / 16, this.pos[1] / 16, newPos[0], newPos[1])
-                        result = raycastTileMap(this.pos[0], this.pos[1], angle, distToPos)
+                        tilePos = [pos[0] / 16, pos[1] / 16]
+                        angle = calcAngle(tilePos[0], tilePos[1], newPos[0], newPos[1])
+                        distToPos = calcDistance(tilePos[0], tilePos[1], newPos[0], newPos[1])
+                        result = raycastTileMap(pos[0], pos[1], angle, distToPos)
                         if (result.getHitType() != 0) {
                             continue
                         }
@@ -268,24 +283,67 @@ class EnemyEntityObject {
                 }
                 if (prevDist != 1000 || closestTile != null) {
                     this.waypoint = [closestTile[0] * 16, closestTile[1] * 16]
-                    console.log(this.waypoint)
                 }
                 
             }
             
         }
         
-        this.entSprite.setPosition(this.pos[0], this.pos[1])
+        if (this.pos == null) {
+            this.entSprite.setPosition(this.pos[0], this.pos[1])
+        }
+        
+        this.entSprite.setVelocity(this.vel[0], this.vel[1])
     }
     
+    // Okay if we use a waypoint system and then the waypoint is gened past a wall it'll fail.
+    // So what about a A* like pathing but that simplifies it self to waypoints list.
+    // And each waypoint completes a raycast check to see if each points sees each other after eached staged move.
+    // Velcity movement works just need implment this system.
     public doMovement() {
-        // TODO change this from direct position to velocity.
+        let angle: number;
+        let vel: number[];
+        let result: RaycastResult;
         if (this.entSprite == null || this.waypoint == null) {
             return
         }
         
-        let cx = this.pos[0]
-        let cy = this.pos[1]
+        let pos = this.getPos()
+        let vx = 0
+        let vy = 0
+        let cx = pos[0]
+        let cy = pos[1]
+        let wx = this.waypoint[0] + 0.8
+        let wy = this.waypoint[1] + 0.8
+        let distToPoint = calcDistance(cx, cy, wx, wy)
+        if (distToPoint > 1) {
+            angle = calcAngle(cx, cy, wx, wy)
+            vel = movementVelocity(95, angle)
+            vx += -vel[0]
+            vy += -vel[1]
+            result = raycastTileMap(cx, cy, angle, distToPoint)
+            if (result.getHitType() != 0) {
+                //  print("Can't See waypoint.")
+                this.waypoint = null
+            }
+            
+        } else {
+            this.waypoint = null
+        }
+        
+        this.vel[0] = vx
+        this.vel[1] = vy
+    }
+    
+    public doMovementOLD() {
+        // TODO Remove this when velocity is complete
+        if (this.entSprite == null || this.waypoint == null) {
+            return
+        }
+        
+        let pos = this.getPos()
+        let cx = pos[0]
+        let cy = pos[1]
         let wx = this.waypoint[0]
         let wy = this.waypoint[1]
         if (calcDistance(cx, cy, wx, wy) > 1) {
@@ -305,8 +363,8 @@ class EnemyEntityObject {
             this.waypoint = null
         }
         
-        this.pos[0] = cx
-        this.pos[1] = cy
+        pos[0] = cx
+        pos[1] = cy
     }
     
     public getSprite(): Sprite {
@@ -542,7 +600,7 @@ function executeAction(actionID: number) {
             
         }
     } else if (actionID == 3) {
-        result = raycastTileMap(playerOne.x, playerOne.y, 45, 10)
+        result = raycastTileMap(playerOne.x, playerOne.y, 0, 10)
         console.log(result.getHitType())
     }
     
@@ -1107,15 +1165,18 @@ function calcAngle(fromPosX: number, fromPosY: number, toPosX: number, toPosY: n
     return wrapDegrees(toDegrees(Math.atan2(xDiff, yDiff)))
 }
 
-function movementVelocity(fromPosX: number, fromPosY: number, toPosX: number, toPosY: number) {
-    let angle = calcAngle(fromPosX, fromPosY, toPosX, toPosY)
+// TODO add this
+function movementVelocity(speed: number, angle: number): number[] {
+    let velX = Math.sin(toRadians(angle)) * speed
+    let velY = Math.cos(toRadians(angle)) * speed
+    return [velX, velY]
 }
 
 // Shoots a raycast from a position. using angle and distance limiter. (TileMap)
 function raycastTileMap(posX: number, posY: number, angle: number, distance: number): RaycastResult {
-    let currentPosX = posX / 16
-    let currentPosY = posY / 16
-    let step = 0
+    let currentPosX = Math.trunc(posX / 16)
+    let currentPosY = Math.trunc(posY / 16)
+    let step = -1
     let sin = Math.sin(toRadians(angle))
     let cos = Math.cos(toRadians(angle))
     let toPos = [currentPosX + distance * cos, currentPosY + distance * sin]
@@ -1123,7 +1184,7 @@ function raycastTileMap(posX: number, posY: number, angle: number, distance: num
         currentPosX += 1 * cos
         currentPosY += 1 * sin
         step += 1
-        if (tiles.tileAtLocationIsWall(tiles.getTileLocation(Math.trunc(currentPosX), Math.trunc(currentPosY)))) {
+        if (tiles.tileAtLocationIsWall(tiles.getTileLocation(currentPosX, currentPosY))) {
             return new RaycastResult([posX, posY], [currentPosX, currentPosY], 1)
         }
         

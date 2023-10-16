@@ -39,7 +39,8 @@ class LvlDoorData():
 # 1 = Iron_Golem
 # 2 = 
 class EnemyEntityObject():
-    pos = (0,0)
+    pos = None
+    vel = (0,0)
     waypoint = (-1, -1)
     speed = 1
     entSprite = None
@@ -58,7 +59,7 @@ class EnemyEntityObject():
         self.pos = pos
 
     def getPos(self):
-        return self.pos
+        return (self.entSprite.x, self.entSprite.y)
 
     def update(self):
         global playerOne, levelSizes, levelID
@@ -72,18 +73,19 @@ class EnemyEntityObject():
             self.entSprite.destroy()
             return
         
+        pos = self.getPos()
         
         self.doMovement()
         
-        distToPlayer = calcDistance(self.pos[0], self.pos[1], playerOne.x, playerOne.y)
+        distToPlayer = calcDistance(pos[0], pos[1], playerOne.x, playerOne.y)
         if (distToPlayer <= 50):
             if(self.attackDelay >= 25):
-                angle = calcAngle(self.pos[0], self.pos[1], playerOne.x, playerOne.y)
+                angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
                 velX = Math.sin(toRadians(angle)) * 95
                 velY = Math.cos(toRadians(angle)) * 95
 
                 temp = sprites.create(assets.image("""Witch_Attack"""), SpriteKind.projectile)
-                temp.set_position(self.pos[0], self.pos[1])
+                temp.set_position(pos[0], pos[1])
                 temp.set_velocity(-velX, -velY)
                 temp.set_flag(SpriteFlag.AUTO_DESTROY, True)
                 temp.set_flag(SpriteFlag.DESTROY_ON_WALL, True)
@@ -100,15 +102,17 @@ class EnemyEntityObject():
                     closestTile = None
                     for x in range(-5, 5):
                         for y in range(-5, 5):
-                            newPos = ((self.pos[0] / 16) + x, (self.pos[1] / 16) + y)
+                            newPos = ((pos[0] / 16) + x, (pos[1] / 16) + y)
                          
                             #Dist
                             distToPlayer = calcDistance(newPos[0], newPos[1], playerOne.x / 16, playerOne.y / 16)
 
                             #Raycast
-                            angle = calcAngle(self.pos[0] / 16, self.pos[1] / 16, newPos[0], newPos[1])
-                            distToPos = calcDistance(self.pos[0] / 16, self.pos[1] / 16, newPos[0], newPos[1])
-                            result = raycastTileMap(self.pos[0], self.pos[1], angle, distToPos)
+                            tilePos = (pos[0] / 16, pos[1] / 16)
+                            angle = calcAngle(tilePos[0], tilePos[1], newPos[0], newPos[1])
+                            distToPos = calcDistance(tilePos[0], tilePos[1], newPos[0], newPos[1])
+
+                            result = raycastTileMap(pos[0], pos[1], angle, distToPos)
 
                             if(result.getHitType() != 0):
                                 continue
@@ -119,17 +123,52 @@ class EnemyEntityObject():
 
                     if prevDist != 1000 or closestTile != None:
                         self.waypoint = (closestTile[0] * 16, closestTile[1] * 16)
-                        print(self.waypoint)
+        if self.pos == None:
+            self.entSprite.setPosition(self.pos[0], self.pos[1])
+        self.entSprite.set_velocity(self.vel[0], self.vel[1])
 
-        self.entSprite.setPosition(self.pos[0], self.pos[1])
-
-
-    def doMovement(self):#TODO change this from direct position to velocity.
+    #Okay if we use a waypoint system and then the waypoint is gened past a wall it'll fail.
+    #So what about a A* like pathing but that simplifies it self to waypoints list.
+    #And each waypoint completes a raycast check to see if each points sees each other after eached staged move.
+    #Velcity movement works just need implment this system.
+    def doMovement(self):
         if self.entSprite == None or self.waypoint == None:
             return
 
-        cx = self.pos[0]
-        cy = self.pos[1]
+        pos = self.getPos()
+        vx = 0
+        vy = 0
+        cx = pos[0]
+        cy = pos[1]
+        wx = self.waypoint[0] + 0.8
+        wy = self.waypoint[1] + 0.8
+        distToPoint = calcDistance(cx, cy, wx, wy)
+        if distToPoint > 1:
+            angle = calcAngle(cx, cy, wx, wy)
+            vel = movementVelocity(95, angle)
+            vx += -vel[0]
+            vy += -vel[1]
+
+            result = raycastTileMap(cx, cy, angle, distToPoint)
+
+            if(result.getHitType() != 0):
+               # print("Can't See waypoint.")
+                self.waypoint = None
+
+        else:
+            self.waypoint = None
+        self.vel[0] = vx
+        self.vel[1] = vy
+
+
+
+    def doMovementOLD(self):#TODO Remove this when velocity is complete
+        if self.entSprite == None or self.waypoint == None:
+            return
+
+        pos = self.getPos()
+        cx = pos[0]
+        cy = pos[1]
         wx = self.waypoint[0]
         wy = self.waypoint[1]
         if calcDistance(cx, cy, wx, wy) > 1:
@@ -144,8 +183,8 @@ class EnemyEntityObject():
                 cy -= self.speed
         else:
             self.waypoint = None
-        self.pos[0] = cx
-        self.pos[1] = cy
+        pos[0] = cx
+        pos[1] = cy
 
     def getSprite(self):
         return self.entSprite
@@ -248,7 +287,7 @@ def executeAction(actionID: number):
                     playerInventory[x3] = 0
                     break
     elif actionID == 3:
-        result = raycastTileMap(playerOne.x, playerOne.y, 45, 10)
+        result = raycastTileMap(playerOne.x, playerOne.y, 0, 10)
         print(result.getHitType())
 
 class msDelay():#This breaks blocks. and its annoying.
@@ -669,16 +708,17 @@ def calcAngle(fromPosX, fromPosY, toPosX, toPosY):
     yDiff = fromPosY - toPosY
     return wrapDegrees(toDegrees(Math.atan2(xDiff, yDiff)))
 
-def movementVelocity(fromPosX, fromPosY, toPosX, toPosY):
-    angle = calcAngle(fromPosX, fromPosY, toPosX, toPosY)
+#TODO add this
+def movementVelocity(speed, angle):
+    velX = Math.sin(toRadians(angle)) * speed
+    velY = Math.cos(toRadians(angle)) * speed
+    return (velX, velY)
     
-
-
 #Shoots a raycast from a position. using angle and distance limiter. (TileMap)
 def raycastTileMap(posX, posY, angle, distance):
-    currentPosX = posX / 16
-    currentPosY = posY / 16
-    step = 0
+    currentPosX = int(posX / 16)
+    currentPosY = int(posY / 16)
+    step = -1
     
     sin = Math.sin(toRadians(angle))
     cos = Math.cos(toRadians(angle))
@@ -689,7 +729,7 @@ def raycastTileMap(posX, posY, angle, distance):
         currentPosY += 1 * sin
         step += 1
 
-        if(tiles.tile_at_location_is_wall(tiles.get_tile_location(int(currentPosX), int(currentPosY)))):
+        if(tiles.tile_at_location_is_wall(tiles.get_tile_location(currentPosX, currentPosY))):
             return RaycastResult((posX, posY), (currentPosX, currentPosY), 1)
     return RaycastResult((posX, posY), (currentPosX, currentPosY), 0)
 
