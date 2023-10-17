@@ -73,11 +73,21 @@ class EnemyEntityObject():
             self.entSprite.destroy()
             return
         
-        pos = self.getPos()
-        
+        pos = (self.entSprite.x, self.entSprite.y)
+        canSeePlayer = False
+        distToPlayer = calcDistance(pos[0], pos[1], playerOne.x, playerOne.y)
+
+        if distToPlayer <= 80:
+            angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
+            result = raycast(pos[0], pos[1], angle, distToPos, SpriteKind.player)
+
+            if result.getHitType() == 2:
+                canSeePlayer = True
+
+            print(canSeePlayer)
+
         self.doMovement()
         
-        distToPlayer = calcDistance(pos[0], pos[1], playerOne.x, playerOne.y)
         if (distToPlayer <= 50):
             if(self.attackDelay >= 25):
                 angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
@@ -100,21 +110,22 @@ class EnemyEntityObject():
                     #This is all done by tiles. They're 16x16 so dvide by 16.
                     prevDist = 1000
                     closestTile = None
-                    for x in range(-5, 5):
-                        for y in range(-5, 5):
-                            tilePos = ( int(pos[0] / 16), int(pos[1] / 16) )
-                            newPos = ( (tilePos[0]) + x, (tilePos[1]) + y)
+                    for offsetX in range(-5, 5):
+                        for offsetY in range(-5, 5):
+                            entTilePos = ( Math.floor(pos[0] / 16), Math.floor(pos[1] / 16) )
+                            newPos = ( (entTilePos[0]) + offsetX, (entTilePos[1]) + offsetY)
+                            playerTilePos = ( Math.floor(playerOne.x / 16), Math.floor(playerOne.y / 16) )
 
                             #Raycast
-                            angle = calcAngle(tilePos[0], tilePos[1], newPos[0], newPos[1])
-                            distToPos = calcDistance(tilePos[0], tilePos[1], newPos[0], newPos[1])
+                            angle = calcAngle(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
+                            distToPos = calcDistance(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
 
                             result = raycastTileMap(pos[0], pos[1], angle, distToPos)
 
                             if(result.getHitType() == 0):
                                 continue
 
-                            distToPlayer = calcDistance(newPos[0], newPos[1], tilePos[0], tilePos[1])
+                            distToPlayer = Math.floor(calcDistance(newPos[0], newPos[1], playerTilePos[0], playerTilePos[1]))
                             if distToPlayer < prevDist:
                                 prevDist = distToPlayer
                                 closestTile = newPos
@@ -122,9 +133,11 @@ class EnemyEntityObject():
                     if prevDist != 1000 or closestTile != None:
                         self.waypoint = (closestTile[0] * 16, closestTile[1] * 16)
 
-                        debugSprite.set_position(closestTile[0] * 16, closestTile[1] * 16)
+                        debugSprite.set_position(Math.floor(closestTile[0] * 16), Math.floor(closestTile[1] * 16))
+
         if self.pos == None:
             self.entSprite.setPosition(self.pos[0], self.pos[1])
+
         self.entSprite.set_velocity(self.vel[0], self.vel[1])
 
     #Okay if we use a waypoint system and then the waypoint is gened past a wall it'll fail.
@@ -142,42 +155,27 @@ class EnemyEntityObject():
         cy = pos[1]
         wx = self.waypoint[0]
         wy = self.waypoint[1]
-        distToPoint = calcDistance(cx, cy, wx, wy)
+        distToPoint = calcDistance(toTilePos(cx), toTilePos(cy), toTilePos(wx), toTilePos(wy))
         if distToPoint > 1:
             angle = calcAngle(cx, cy, wx, wy)
-            vel = movementVelocity(95, angle)
-            vx += -vel[0]
-            vy += -vel[1]
+
+            hitWall = False
+            for angleOffset in (16, 0, -16):
+                result = raycastTileMap(wx, wy, angle + angleOffset, distToPoint)
+                if(result.getHitType() == 0):
+                    hitWall = True
+
+            if(hitWall):
+                self.waypoint = None
+            else:
+                vel = movementVelocity(95, angle)
+                vx += -vel[0]
+                vy += -vel[1]
         else:
             self.waypoint = None
+
         self.vel[0] = vx
         self.vel[1] = vy
-
-
-
-    def doMovementOLD(self):#TODO Remove this when velocity is complete
-        if self.entSprite == None or self.waypoint == None:
-            return
-
-        pos = self.getPos()
-        cx = pos[0]
-        cy = pos[1]
-        wx = self.waypoint[0]
-        wy = self.waypoint[1]
-        if calcDistance(cx, cy, wx, wy) > 1:
-            if cx < wx:
-                cx += self.speed
-            elif cx > wx:
-                cx -= self.speed
-
-            if cy < wy:
-                cy += self.speed
-            elif cy > wy:
-                cy -= self.speed
-        else:
-            self.waypoint = None
-        pos[0] = cx
-        pos[1] = cy
 
     def getSprite(self):
         return self.entSprite
@@ -283,9 +281,9 @@ def executeAction(actionID: number):
         result = raycastTileMap(playerOne.x, playerOne.y, 0, 10)
         print(result.getHitType())
         if result.getHitType() == 1:
-            print("Hit Wall")
+            sendNotify("Hit Wall.")
         else:
-            print("Hit nothing")
+            sendNotify("Hit nothing")
 
 class msDelay():#This breaks blocks. and its annoying.
     time = 0
@@ -313,6 +311,7 @@ class SpriteKind:
     Item = SpriteKind.create()
     Inventory = SpriteKind.create()
     PlayerProjectile = SpriteKind.create()
+    Debug = SpriteKind.create()
 
 def updatePlayer():
     global inventorySlot, inventoryOpen, playerFrameOffsetIndex, playerFrameIndex, actionSelectIndex, playerAction, notifyText
@@ -334,8 +333,7 @@ def updatePlayer():
                 playerInventory[inventorySlot] = 0
             elif controller.right.is_pressed():
                 # Inspect Item
-                if notifyText == None:
-                    sendNotify(getDescription(playerInventory[inventorySlot]))
+                sendNotify(getDescription(playerInventory[inventorySlot]))
         inventorySlot = clamp(0, 3, inventorySlot)
         if controller.A.is_pressed():
             if inventoryOpenDelay.passedMS(200):
@@ -490,8 +488,9 @@ def useItem(itemID: number):
 #Sends a notification to the top right of the screen.
 def sendNotify(text: str):
     global notifyText
-    notifyText = textsprite.create(text, 10, 15)
-    notifyDisplayTimer.reset()
+    if notifyText == None:
+        notifyText = textsprite.create(text, 10, 15)
+        notifyDisplayTimer.reset()
 # Move all Inventory elements offScreen.
 def offScreen():
     inventorySprite.set_position(-1000, -1000)
@@ -716,8 +715,8 @@ def movementVelocity(speed, angle):
 # 1 = wall
 # 2 = Entities
 def raycastTileMap(posX, posY, angle, distance):
-    currentPosX = int(posX / 16)
-    currentPosY = int(posY / 16)
+    currentPosX = Math.floor(posX / 16)
+    currentPosY = Math.floor(posY / 16)
     step = 0
     
     sin = Math.sin(toRadians(angle))
@@ -725,7 +724,6 @@ def raycastTileMap(posX, posY, angle, distance):
     toPos = (currentPosX + (distance * cos), currentPosY + (distance * sin))
 
     while step != distance:
-        #print(currentPosX + " | "+currentPosY)
         currentPosX += Math.round(1 * cos)
         currentPosY += Math.round(1 * sin)
         step += 1
@@ -745,12 +743,21 @@ def raycast(posX, posY, angle, distance, spriteKind):
     cos = Math.cos(toRadians(angle))
     toPos = (currentPosX + (distance * cos), currentPosY + (distance * sin))
 
+    #spriteScan = step % 16 == 1
+    #print(step % 16)
     while step != distance:
         currentPosX += 1 * cos
         currentPosY += 1 * sin
         step += 1
 
-        print(currentPosX+" "+currentPosY+" | "+step)
+        #if spriteScan:
+        #    for sprite in sprites.all_of_kind(spriteKind):
+        #        distToSprite = calcDistance(currentPosX, currentPosY, sprite.x, sprite.y)
+        #        if distToSprite >= 2:
+        #            continue
+        #            
+        #        if spriteIntersectCheck(currentPosX, currentPosY, sprite):
+        #            return RaycastResult((posX, posY), (currentPosX, currentPosY), 2)
 
         #TODO add objects return.
     return RaycastResult((posX, posY), (currentPosX, currentPosY), 0)
@@ -758,6 +765,16 @@ def raycast(posX, posY, angle, distance, spriteKind):
 #Converts degrees to radians.
 def toRadians(degrees):
     return degrees * Math.PI / 180
+
+#Converts normal position value to a TileMap row / column position value. only indervidual values. such as X or Y not a pair.
+def toTilePos(posXY):
+    return Math.floor(posXY / 16)
+
+def spriteIntersectCheck(posX, posY, sprite : Sprite):
+    if sprite.x >= posX and (sprite.x + sprite.width) <= posX or sprite.y >= posY and (sprite.y + sprite.height) <= posY:
+        return True
+    else:
+        return False
 ### Maths Funcs END
 
 
@@ -885,7 +902,7 @@ def updateIntro():#21
 
 # Intro Vars and Funcs END
 
-debugSprite = sprites.create(assets.image("""Waypoint_Debug"""), SpriteKind.enemy)
+debugSprite = sprites.create(assets.image("""Waypoint_Debug"""), SpriteKind.Debug)
 
 setLevel()
 offScreen()

@@ -213,15 +213,16 @@ class EnemyEntityObject {
     
     public update() {
         let angle: number;
+        let result: RaycastResult;
         let velX: number;
         let velY: number;
         let temp: Sprite;
         let prevDist: number;
         let closestTile: number[];
-        let tilePos: number[];
+        let entTilePos: number[];
         let newPos: number[];
+        let playerTilePos: number[];
         let distToPos: number;
-        let result: RaycastResult;
         
         if (this.entSprite == null) {
             this.shouldDelete = true
@@ -235,9 +236,20 @@ class EnemyEntityObject {
             return
         }
         
-        let pos = this.getPos()
-        this.doMovement()
+        let pos = [this.entSprite.x, this.entSprite.y]
+        let canSeePlayer = false
         let distToPlayer = calcDistance(pos[0], pos[1], playerOne.x, playerOne.y)
+        if (distToPlayer <= 80) {
+            angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
+            result = raycast(pos[0], pos[1], angle, distToPos, SpriteKind.Player)
+            if (result.getHitType() == 2) {
+                canSeePlayer = true
+            }
+            
+            console.log(canSeePlayer)
+        }
+        
+        this.doMovement()
         if (distToPlayer <= 50) {
             if (this.attackDelay >= 25) {
                 angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
@@ -260,19 +272,20 @@ class EnemyEntityObject {
                 // This is all done by tiles. They're 16x16 so dvide by 16.
                 prevDist = 1000
                 closestTile = null
-                for (let x = -5; x < 5; x++) {
-                    for (let y = -5; y < 5; y++) {
-                        tilePos = [Math.trunc(pos[0] / 16), Math.trunc(pos[1] / 16)]
-                        newPos = [tilePos[0] + x, tilePos[1] + y]
+                for (let offsetX = -5; offsetX < 5; offsetX++) {
+                    for (let offsetY = -5; offsetY < 5; offsetY++) {
+                        entTilePos = [Math.floor(pos[0] / 16), Math.floor(pos[1] / 16)]
+                        newPos = [entTilePos[0] + offsetX, entTilePos[1] + offsetY]
+                        playerTilePos = [Math.floor(playerOne.x / 16), Math.floor(playerOne.y / 16)]
                         // Raycast
-                        angle = calcAngle(tilePos[0], tilePos[1], newPos[0], newPos[1])
-                        distToPos = calcDistance(tilePos[0], tilePos[1], newPos[0], newPos[1])
+                        angle = calcAngle(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
+                        distToPos = calcDistance(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
                         result = raycastTileMap(pos[0], pos[1], angle, distToPos)
                         if (result.getHitType() == 0) {
                             continue
                         }
                         
-                        distToPlayer = calcDistance(newPos[0], newPos[1], tilePos[0], tilePos[1])
+                        distToPlayer = Math.floor(calcDistance(newPos[0], newPos[1], playerTilePos[0], playerTilePos[1]))
                         if (distToPlayer < prevDist) {
                             prevDist = distToPlayer
                             closestTile = newPos
@@ -282,7 +295,7 @@ class EnemyEntityObject {
                 }
                 if (prevDist != 1000 || closestTile != null) {
                     this.waypoint = [closestTile[0] * 16, closestTile[1] * 16]
-                    debugSprite.setPosition(closestTile[0] * 16, closestTile[1] * 16)
+                    debugSprite.setPosition(Math.floor(closestTile[0] * 16), Math.floor(closestTile[1] * 16))
                 }
                 
             }
@@ -302,6 +315,8 @@ class EnemyEntityObject {
     // Velcity movement works just need implment this system.
     public doMovement() {
         let angle: number;
+        let hitWall: boolean;
+        let result: RaycastResult;
         let vel: number[];
         if (this.entSprite == null || this.waypoint == null) {
             return
@@ -314,50 +329,31 @@ class EnemyEntityObject {
         let cy = pos[1]
         let wx = this.waypoint[0]
         let wy = this.waypoint[1]
-        let distToPoint = calcDistance(cx, cy, wx, wy)
+        let distToPoint = calcDistance(toTilePos(cx), toTilePos(cy), toTilePos(wx), toTilePos(wy))
         if (distToPoint > 1) {
             angle = calcAngle(cx, cy, wx, wy)
-            vel = movementVelocity(95, angle)
-            vx += -vel[0]
-            vy += -vel[1]
+            hitWall = false
+            for (let angleOffset of [16, 0, -16]) {
+                result = raycastTileMap(wx, wy, angle + angleOffset, distToPoint)
+                if (result.getHitType() == 0) {
+                    hitWall = true
+                }
+                
+            }
+            if (hitWall) {
+                this.waypoint = null
+            } else {
+                vel = movementVelocity(95, angle)
+                vx += -vel[0]
+                vy += -vel[1]
+            }
+            
         } else {
             this.waypoint = null
         }
         
         this.vel[0] = vx
         this.vel[1] = vy
-    }
-    
-    public doMovementOLD() {
-        // TODO Remove this when velocity is complete
-        if (this.entSprite == null || this.waypoint == null) {
-            return
-        }
-        
-        let pos = this.getPos()
-        let cx = pos[0]
-        let cy = pos[1]
-        let wx = this.waypoint[0]
-        let wy = this.waypoint[1]
-        if (calcDistance(cx, cy, wx, wy) > 1) {
-            if (cx < wx) {
-                cx += this.speed
-            } else if (cx > wx) {
-                cx -= this.speed
-            }
-            
-            if (cy < wy) {
-                cy += this.speed
-            } else if (cy > wy) {
-                cy -= this.speed
-            }
-            
-        } else {
-            this.waypoint = null
-        }
-        
-        pos[0] = cx
-        pos[1] = cy
     }
     
     public getSprite(): Sprite {
@@ -596,9 +592,9 @@ function executeAction(actionID: number) {
         result = raycastTileMap(playerOne.x, playerOne.y, 0, 10)
         console.log(result.getHitType())
         if (result.getHitType() == 1) {
-            console.log("Hit Wall")
+            sendNotify("Hit Wall.")
         } else {
-            console.log("Hit nothing")
+            sendNotify("Hit nothing")
         }
         
     }
@@ -656,6 +652,7 @@ namespace SpriteKind {
     export const Item = SpriteKind.create()
     export const Inventory = SpriteKind.create()
     export const PlayerProjectile = SpriteKind.create()
+    export const Debug = SpriteKind.create()
 }
 
 function updatePlayer() {
@@ -685,10 +682,7 @@ function updatePlayer() {
                 playerInventory[inventorySlot] = 0
             } else if (controller.right.isPressed()) {
                 //  Inspect Item
-                if (notifyText == null) {
-                    sendNotify(getDescription(playerInventory[inventorySlot]))
-                }
-                
+                sendNotify(getDescription(playerInventory[inventorySlot]))
             }
             
         }
@@ -909,8 +903,11 @@ function useItem(itemID: number) {
 // Sends a notification to the top right of the screen.
 function sendNotify(text: string) {
     
-    notifyText = textsprite.create(text, 10, 15)
-    notifyDisplayTimer.reset()
+    if (notifyText == null) {
+        notifyText = textsprite.create(text, 10, 15)
+        notifyDisplayTimer.reset()
+    }
+    
 }
 
 //  Move all Inventory elements offScreen.
@@ -1176,14 +1173,13 @@ function movementVelocity(speed: number, angle: number): number[] {
 //  1 = wall
 //  2 = Entities
 function raycastTileMap(posX: number, posY: number, angle: number, distance: number): RaycastResult {
-    let currentPosX = Math.trunc(posX / 16)
-    let currentPosY = Math.trunc(posY / 16)
+    let currentPosX = Math.floor(posX / 16)
+    let currentPosY = Math.floor(posY / 16)
     let step = 0
     let sin = Math.sin(toRadians(angle))
     let cos = Math.cos(toRadians(angle))
     let toPos = [currentPosX + distance * cos, currentPosY + distance * sin]
     while (step != distance) {
-        // print(currentPosX + " | "+currentPosY)
         currentPosX += Math.round(1 * cos)
         currentPosY += Math.round(1 * sin)
         step += 1
@@ -1196,19 +1192,28 @@ function raycastTileMap(posX: number, posY: number, angle: number, distance: num
 }
 
 // Shoots a raycast from a position. using angle and distance limiter.
-function raycast(posX: any, posY: any, angle: number, distance: number, spriteKind: any): RaycastResult {
+function raycast(posX: number, posY: number, angle: number, distance: number, spriteKind: number): RaycastResult {
     let currentPosX = posX
     let currentPosY = posY
     let step = 0
     let sin = Math.sin(toRadians(angle))
     let cos = Math.cos(toRadians(angle))
     let toPos = [currentPosX + distance * cos, currentPosY + distance * sin]
+    // spriteScan = step % 16 == 1
+    // print(step % 16)
     while (step != distance) {
         currentPosX += 1 * cos
         currentPosY += 1 * sin
         step += 1
-        console.log(currentPosX + " " + currentPosY + " | " + step)
     }
+    // if spriteScan:
+    //     for sprite in sprites.all_of_kind(spriteKind):
+    //         distToSprite = calcDistance(currentPosX, currentPosY, sprite.x, sprite.y)
+    //         if distToSprite >= 2:
+    //             continue
+    //             
+    //         if spriteIntersectCheck(currentPosX, currentPosY, sprite):
+    //             return RaycastResult((posX, posY), (currentPosX, currentPosY), 2)
     // TODO add objects return.
     return new RaycastResult([posX, posY], [currentPosX, currentPosY], 0)
 }
@@ -1216,6 +1221,20 @@ function raycast(posX: any, posY: any, angle: number, distance: number, spriteKi
 // Converts degrees to radians.
 function toRadians(degrees: number): number {
     return degrees * Math.PI / 180
+}
+
+// Converts normal position value to a TileMap row / column position value. only indervidual values. such as X or Y not a pair.
+function toTilePos(posXY: number): number {
+    return Math.floor(posXY / 16)
+}
+
+function spriteIntersectCheck(posX: any, posY: any, sprite: Sprite): boolean {
+    if (sprite.x >= posX && sprite.x + sprite.width <= posX || sprite.y >= posY && sprite.y + sprite.height <= posY) {
+        return true
+    } else {
+        return false
+    }
+    
 }
 
 // ## Maths Funcs END
@@ -1301,7 +1320,7 @@ function updateIntro() {
 }
 
 //  Intro Vars and Funcs END
-let debugSprite = sprites.create(assets.image`Waypoint_Debug`, SpriteKind.Enemy)
+let debugSprite = sprites.create(assets.image`Waypoint_Debug`, SpriteKind.Debug)
 setLevel()
 offScreen()
 forever(function on_forever() {
