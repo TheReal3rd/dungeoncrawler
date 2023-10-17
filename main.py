@@ -102,27 +102,27 @@ class EnemyEntityObject():
                     closestTile = None
                     for x in range(-5, 5):
                         for y in range(-5, 5):
-                            newPos = ((pos[0] / 16) + x, (pos[1] / 16) + y)
-                         
-                            #Dist
-                            distToPlayer = calcDistance(newPos[0], newPos[1], playerOne.x / 16, playerOne.y / 16)
+                            tilePos = ( int(pos[0] / 16), int(pos[1] / 16) )
+                            newPos = ( (tilePos[0]) + x, (tilePos[1]) + y)
 
                             #Raycast
-                            tilePos = (pos[0] / 16, pos[1] / 16)
                             angle = calcAngle(tilePos[0], tilePos[1], newPos[0], newPos[1])
                             distToPos = calcDistance(tilePos[0], tilePos[1], newPos[0], newPos[1])
 
                             result = raycastTileMap(pos[0], pos[1], angle, distToPos)
 
-                            if(result.getHitType() != 0):
+                            if(result.getHitType() == 0):
                                 continue
 
+                            distToPlayer = calcDistance(newPos[0], newPos[1], tilePos[0], tilePos[1])
                             if distToPlayer < prevDist:
                                 prevDist = distToPlayer
                                 closestTile = newPos
 
                     if prevDist != 1000 or closestTile != None:
                         self.waypoint = (closestTile[0] * 16, closestTile[1] * 16)
+
+                        debugSprite.set_position(closestTile[0] * 16, closestTile[1] * 16)
         if self.pos == None:
             self.entSprite.setPosition(self.pos[0], self.pos[1])
         self.entSprite.set_velocity(self.vel[0], self.vel[1])
@@ -140,21 +140,14 @@ class EnemyEntityObject():
         vy = 0
         cx = pos[0]
         cy = pos[1]
-        wx = self.waypoint[0] + 0.8
-        wy = self.waypoint[1] + 0.8
+        wx = self.waypoint[0]
+        wy = self.waypoint[1]
         distToPoint = calcDistance(cx, cy, wx, wy)
         if distToPoint > 1:
             angle = calcAngle(cx, cy, wx, wy)
             vel = movementVelocity(95, angle)
             vx += -vel[0]
             vy += -vel[1]
-
-            result = raycastTileMap(cx, cy, angle, distToPoint)
-
-            if(result.getHitType() != 0):
-               # print("Can't See waypoint.")
-                self.waypoint = None
-
         else:
             self.waypoint = None
         self.vel[0] = vx
@@ -289,6 +282,10 @@ def executeAction(actionID: number):
     elif actionID == 3:
         result = raycastTileMap(playerOne.x, playerOne.y, 0, 10)
         print(result.getHitType())
+        if result.getHitType() == 1:
+            print("Hit Wall")
+        else:
+            print("Hit nothing")
 
 class msDelay():#This breaks blocks. and its annoying.
     time = 0
@@ -715,22 +712,27 @@ def movementVelocity(speed, angle):
     return (velX, velY)
     
 #Shoots a raycast from a position. using angle and distance limiter. (TileMap)
+# 0 = None
+# 1 = wall
+# 2 = Entities
 def raycastTileMap(posX, posY, angle, distance):
     currentPosX = int(posX / 16)
     currentPosY = int(posY / 16)
-    step = -1
+    step = 0
     
     sin = Math.sin(toRadians(angle))
     cos = Math.cos(toRadians(angle))
     toPos = (currentPosX + (distance * cos), currentPosY + (distance * sin))
 
     while step != distance:
-        currentPosX += 1 * cos
-        currentPosY += 1 * sin
+        #print(currentPosX + " | "+currentPosY)
+        currentPosX += Math.round(1 * cos)
+        currentPosY += Math.round(1 * sin)
         step += 1
 
         if(tiles.tile_at_location_is_wall(tiles.get_tile_location(currentPosX, currentPosY))):
             return RaycastResult((posX, posY), (currentPosX, currentPosY), 1)
+
     return RaycastResult((posX, posY), (currentPosX, currentPosY), 0)
 
 #Shoots a raycast from a position. using angle and distance limiter.
@@ -883,7 +885,7 @@ def updateIntro():#21
 
 # Intro Vars and Funcs END
 
-
+debugSprite = sprites.create(assets.image("""Waypoint_Debug"""), SpriteKind.enemy)
 
 setLevel()
 offScreen()

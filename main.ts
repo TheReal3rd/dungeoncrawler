@@ -218,8 +218,8 @@ class EnemyEntityObject {
         let temp: Sprite;
         let prevDist: number;
         let closestTile: number[];
-        let newPos: number[];
         let tilePos: number[];
+        let newPos: number[];
         let distToPos: number;
         let result: RaycastResult;
         
@@ -262,18 +262,17 @@ class EnemyEntityObject {
                 closestTile = null
                 for (let x = -5; x < 5; x++) {
                     for (let y = -5; y < 5; y++) {
-                        newPos = [pos[0] / 16 + x, pos[1] / 16 + y]
-                        // Dist
-                        distToPlayer = calcDistance(newPos[0], newPos[1], playerOne.x / 16, playerOne.y / 16)
+                        tilePos = [Math.trunc(pos[0] / 16), Math.trunc(pos[1] / 16)]
+                        newPos = [tilePos[0] + x, tilePos[1] + y]
                         // Raycast
-                        tilePos = [pos[0] / 16, pos[1] / 16]
                         angle = calcAngle(tilePos[0], tilePos[1], newPos[0], newPos[1])
                         distToPos = calcDistance(tilePos[0], tilePos[1], newPos[0], newPos[1])
                         result = raycastTileMap(pos[0], pos[1], angle, distToPos)
-                        if (result.getHitType() != 0) {
+                        if (result.getHitType() == 0) {
                             continue
                         }
                         
+                        distToPlayer = calcDistance(newPos[0], newPos[1], tilePos[0], tilePos[1])
                         if (distToPlayer < prevDist) {
                             prevDist = distToPlayer
                             closestTile = newPos
@@ -283,6 +282,7 @@ class EnemyEntityObject {
                 }
                 if (prevDist != 1000 || closestTile != null) {
                     this.waypoint = [closestTile[0] * 16, closestTile[1] * 16]
+                    debugSprite.setPosition(closestTile[0] * 16, closestTile[1] * 16)
                 }
                 
             }
@@ -303,7 +303,6 @@ class EnemyEntityObject {
     public doMovement() {
         let angle: number;
         let vel: number[];
-        let result: RaycastResult;
         if (this.entSprite == null || this.waypoint == null) {
             return
         }
@@ -313,20 +312,14 @@ class EnemyEntityObject {
         let vy = 0
         let cx = pos[0]
         let cy = pos[1]
-        let wx = this.waypoint[0] + 0.8
-        let wy = this.waypoint[1] + 0.8
+        let wx = this.waypoint[0]
+        let wy = this.waypoint[1]
         let distToPoint = calcDistance(cx, cy, wx, wy)
         if (distToPoint > 1) {
             angle = calcAngle(cx, cy, wx, wy)
             vel = movementVelocity(95, angle)
             vx += -vel[0]
             vy += -vel[1]
-            result = raycastTileMap(cx, cy, angle, distToPoint)
-            if (result.getHitType() != 0) {
-                //  print("Can't See waypoint.")
-                this.waypoint = null
-            }
-            
         } else {
             this.waypoint = null
         }
@@ -602,6 +595,12 @@ function executeAction(actionID: number) {
     } else if (actionID == 3) {
         result = raycastTileMap(playerOne.x, playerOne.y, 0, 10)
         console.log(result.getHitType())
+        if (result.getHitType() == 1) {
+            console.log("Hit Wall")
+        } else {
+            console.log("Hit nothing")
+        }
+        
     }
     
 }
@@ -1173,16 +1172,20 @@ function movementVelocity(speed: number, angle: number): number[] {
 }
 
 // Shoots a raycast from a position. using angle and distance limiter. (TileMap)
+//  0 = None
+//  1 = wall
+//  2 = Entities
 function raycastTileMap(posX: number, posY: number, angle: number, distance: number): RaycastResult {
     let currentPosX = Math.trunc(posX / 16)
     let currentPosY = Math.trunc(posY / 16)
-    let step = -1
+    let step = 0
     let sin = Math.sin(toRadians(angle))
     let cos = Math.cos(toRadians(angle))
     let toPos = [currentPosX + distance * cos, currentPosY + distance * sin]
     while (step != distance) {
-        currentPosX += 1 * cos
-        currentPosY += 1 * sin
+        // print(currentPosX + " | "+currentPosY)
+        currentPosX += Math.round(1 * cos)
+        currentPosY += Math.round(1 * sin)
         step += 1
         if (tiles.tileAtLocationIsWall(tiles.getTileLocation(currentPosX, currentPosY))) {
             return new RaycastResult([posX, posY], [currentPosX, currentPosY], 1)
@@ -1298,6 +1301,7 @@ function updateIntro() {
 }
 
 //  Intro Vars and Funcs END
+let debugSprite = sprites.create(assets.image`Waypoint_Debug`, SpriteKind.Enemy)
 setLevel()
 offScreen()
 forever(function on_forever() {
