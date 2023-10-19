@@ -69,12 +69,12 @@ class LvlDoorData {
 
 LvlDoorData.__initLvlDoorData()
 
-class Node {
+class waypointNode {
     static position: number[]
     private ___position_is_set: boolean
     private ___position: number[]
     get position(): number[] {
-        return this.___position_is_set ? this.___position : Node.position
+        return this.___position_is_set ? this.___position : waypointNode.position
     }
     set position(value: number[]) {
         this.___position_is_set = true
@@ -85,16 +85,16 @@ class Node {
     private ___fromPosition_is_set: boolean
     private ___fromPosition: number[]
     get fromPosition(): number[] {
-        return this.___fromPosition_is_set ? this.___fromPosition : Node.fromPosition
+        return this.___fromPosition_is_set ? this.___fromPosition : waypointNode.fromPosition
     }
     set fromPosition(value: number[]) {
         this.___fromPosition_is_set = true
         this.___fromPosition = value
     }
     
-    public static __initNode() {
-        Node.position = [0, 0]
-        Node.fromPosition = [0, 0]
+    public static __initwaypointNode() {
+        waypointNode.position = [0, 0]
+        waypointNode.fromPosition = [0, 0]
     }
     
     constructor() {
@@ -103,7 +103,7 @@ class Node {
     
 }
 
-Node.__initNode()
+waypointNode.__initwaypointNode()
 
 // Movement maybe an A* like movement system? however we have very little processing? So may not work well.
 // Maybe a split processing approach?
@@ -183,6 +183,17 @@ class EnemyEntityObject {
         this.___attackDelay = value
     }
     
+    static waypoint: any[]
+    private ___waypoint_is_set: boolean
+    private ___waypoint: any[]
+    get waypoint(): any[] {
+        return this.___waypoint_is_set ? this.___waypoint : EnemyEntityObject.waypoint
+    }
+    set waypoint(value: any[]) {
+        this.___waypoint_is_set = true
+        this.___waypoint = value
+    }
+    
     static vel: number[]
     private ___vel_is_set: boolean
     private ___vel: number[]
@@ -194,26 +205,15 @@ class EnemyEntityObject {
         this.___vel = value
     }
     
-    static nodes: any[]
-    private ___nodes_is_set: boolean
-    private ___nodes: any[]
-    get nodes(): any[] {
-        return this.___nodes_is_set ? this.___nodes : EnemyEntityObject.nodes
+    static waypointIndex: number
+    private ___waypointIndex_is_set: boolean
+    private ___waypointIndex: number
+    get waypointIndex(): number {
+        return this.___waypointIndex_is_set ? this.___waypointIndex : EnemyEntityObject.waypointIndex
     }
-    set nodes(value: any[]) {
-        this.___nodes_is_set = true
-        this.___nodes = value
-    }
-    
-    static nodesIndex: number
-    private ___nodesIndex_is_set: boolean
-    private ___nodesIndex: number
-    get nodesIndex(): number {
-        return this.___nodesIndex_is_set ? this.___nodesIndex : EnemyEntityObject.nodesIndex
-    }
-    set nodesIndex(value: number) {
-        this.___nodesIndex_is_set = true
-        this.___nodesIndex = value
+    set waypointIndex(value: number) {
+        this.___waypointIndex_is_set = true
+        this.___waypointIndex = value
     }
     
     static speed: number
@@ -227,12 +227,11 @@ class EnemyEntityObject {
         this.___speed = value
     }
     
-    waypoint
     public static __initEnemyEntityObject() {
         EnemyEntityObject.pos = null
         EnemyEntityObject.vel = [0, 0]
-        EnemyEntityObject.nodes = []
-        EnemyEntityObject.nodesIndex = 0
+        EnemyEntityObject.waypoint = []
+        EnemyEntityObject.waypointIndex = 0
         EnemyEntityObject.speed = 1
         EnemyEntityObject.entSprite = null
         EnemyEntityObject.textureID = -1
@@ -245,7 +244,6 @@ class EnemyEntityObject {
     constructor(textureID: number) {
         this.textureID = textureID
         // """En_Witch_Idle"""
-        this.waypoint = null
         if (textureID == 0) {
             this.health = 50
         }
@@ -348,24 +346,25 @@ class EnemyEntityObject {
     // Velcity movement works just need implment this system.
     public doMovement() {
         let vel: number[];
-        if (this.entSprite == null || this.waypoint == null) {
+        if (this.entSprite == null || this.waypoint.length <= 0) {
             return
         }
         
+        let currentWaypoint = this.waypoint[this.waypointIndex]
         let pos = this.getPos()
         let vx = 0
         let vy = 0
         let cx = pos[0]
         let cy = pos[1]
-        let wx = this.waypoint[0]
-        let wy = this.waypoint[1]
+        let wx = currentWaypoint[0]
+        let wy = currentWaypoint[1]
         let distToPoint = calcDistance(toTilePos(cx), toTilePos(cy), toTilePos(wx), toTilePos(wy))
         if (distToPoint > 1) {
             vel = movementVelocity(90, calcAngle(cx, cy, wx, wy))
             vx += -vel[0]
             vy += -vel[1]
         } else {
-            this.waypoint = null
+            this.waypointIndex += 1
         }
         
         this.vel[0] = vx
@@ -1253,6 +1252,17 @@ function spriteIntersectCheck(posX: any, posY: any, sprite: Sprite): boolean {
     
 }
 
+function gCost(startPos: any, currentPos: any): number {
+    let xDiff = startPos[0] - currentPos[0]
+    let yDiff = startPos[1] - currentPos[1]
+    return Math.sqrt(Math.abs(xDiff) + Math.abs(yDiff))
+}
+
+function fCost(startPos: any, currentPos: any, endPos: any) {
+    
+}
+
+//  TODO
 // ## Maths Funcs END
 // Level info START
 let levelSizes = [50, 26]

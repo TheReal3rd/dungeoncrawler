@@ -27,7 +27,7 @@ class LvlDoorData():
     def getPlayerPos(self):
         return self.playerPos
 
-class Node():
+class waypointNode():
     position = (0,0)
     fromPosition = (0,0)
 
@@ -50,8 +50,8 @@ class Node():
 class EnemyEntityObject():
     pos = None
     vel = (0,0)
-    nodes = []
-    nodesIndex = 0
+    waypoint = []
+    waypointIndex = 0
     speed = 1
     entSprite = None
     textureID: number = -1
@@ -61,7 +61,6 @@ class EnemyEntityObject():
 
     def __init__(textureID):
       self.textureID = textureID #"""En_Witch_Idle"""
-      self.waypoint = None
       if textureID == 0:
           self.health = 50
         
@@ -159,23 +158,24 @@ class EnemyEntityObject():
     #And each waypoint completes a raycast check to see if each points sees each other after eached staged move.
     #Velcity movement works just need implment this system.
     def doMovement(self):
-        if self.entSprite == None or self.waypoint == None:
+        if self.entSprite == None or len(self.waypoint) <= 0:
             return
 
+        currentWaypoint = self.waypoint[self.waypointIndex]
         pos = self.getPos()
         vx = 0
         vy = 0
         cx = pos[0]
         cy = pos[1]
-        wx = self.waypoint[0]
-        wy = self.waypoint[1]
+        wx = currentWaypoint[0]
+        wy = currentWaypoint[1]
         distToPoint = calcDistance(toTilePos(cx), toTilePos(cy), toTilePos(wx), toTilePos(wy))
         if distToPoint > 1:  
             vel = movementVelocity(90, calcAngle(cx, cy, wx, wy))
             vx += -vel[0]
             vy += -vel[1]
         else:
-            self.waypoint = None
+            self.waypointIndex += 1
 
         self.vel[0] = vx
         self.vel[1] = vy
@@ -778,6 +778,15 @@ def spriteIntersectCheck(posX, posY, sprite : Sprite):
         return True
     else:
         return False
+
+def gCost(startPos, currentPos):
+    xDiff = startPos[0] - currentPos[0]
+    yDiff = startPos[1] - currentPos[1]
+    return Math.sqrt(Math.abs(xDiff) + Math.abs(yDiff))
+
+def fCost(startPos, currentPos, endPos):
+    pass # TODO
+
 ### Maths Funcs END
 
 
