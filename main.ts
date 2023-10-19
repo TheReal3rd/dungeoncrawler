@@ -69,6 +69,42 @@ class LvlDoorData {
 
 LvlDoorData.__initLvlDoorData()
 
+class Node {
+    static position: number[]
+    private ___position_is_set: boolean
+    private ___position: number[]
+    get position(): number[] {
+        return this.___position_is_set ? this.___position : Node.position
+    }
+    set position(value: number[]) {
+        this.___position_is_set = true
+        this.___position = value
+    }
+    
+    static fromPosition: number[]
+    private ___fromPosition_is_set: boolean
+    private ___fromPosition: number[]
+    get fromPosition(): number[] {
+        return this.___fromPosition_is_set ? this.___fromPosition : Node.fromPosition
+    }
+    set fromPosition(value: number[]) {
+        this.___fromPosition_is_set = true
+        this.___fromPosition = value
+    }
+    
+    public static __initNode() {
+        Node.position = [0, 0]
+        Node.fromPosition = [0, 0]
+    }
+    
+    constructor() {
+        
+    }
+    
+}
+
+Node.__initNode()
+
 // Movement maybe an A* like movement system? however we have very little processing? So may not work well.
 // Maybe a split processing approach?
 // 
@@ -90,17 +126,6 @@ class EnemyEntityObject {
     set textureID(value: number) {
         this.___textureID_is_set = true
         this.___textureID = value
-    }
-    
-    static waypoint: number[]
-    private ___waypoint_is_set: boolean
-    private ___waypoint: number[]
-    get waypoint(): number[] {
-        return this.___waypoint_is_set ? this.___waypoint : EnemyEntityObject.waypoint
-    }
-    set waypoint(value: number[]) {
-        this.___waypoint_is_set = true
-        this.___waypoint = value
     }
     
     static health: number
@@ -169,6 +194,28 @@ class EnemyEntityObject {
         this.___vel = value
     }
     
+    static nodes: any[]
+    private ___nodes_is_set: boolean
+    private ___nodes: any[]
+    get nodes(): any[] {
+        return this.___nodes_is_set ? this.___nodes : EnemyEntityObject.nodes
+    }
+    set nodes(value: any[]) {
+        this.___nodes_is_set = true
+        this.___nodes = value
+    }
+    
+    static nodesIndex: number
+    private ___nodesIndex_is_set: boolean
+    private ___nodesIndex: number
+    get nodesIndex(): number {
+        return this.___nodesIndex_is_set ? this.___nodesIndex : EnemyEntityObject.nodesIndex
+    }
+    set nodesIndex(value: number) {
+        this.___nodesIndex_is_set = true
+        this.___nodesIndex = value
+    }
+    
     static speed: number
     private ___speed_is_set: boolean
     private ___speed: number
@@ -180,10 +227,12 @@ class EnemyEntityObject {
         this.___speed = value
     }
     
+    waypoint
     public static __initEnemyEntityObject() {
         EnemyEntityObject.pos = null
         EnemyEntityObject.vel = [0, 0]
-        EnemyEntityObject.waypoint = [-1, -1]
+        EnemyEntityObject.nodes = []
+        EnemyEntityObject.nodesIndex = 0
         EnemyEntityObject.speed = 1
         EnemyEntityObject.entSprite = null
         EnemyEntityObject.textureID = -1
@@ -213,16 +262,9 @@ class EnemyEntityObject {
     
     public update() {
         let angle: number;
-        let result: RaycastResult;
         let velX: number;
         let velY: number;
         let temp: Sprite;
-        let prevDist: number;
-        let closestTile: number[];
-        let entTilePos: number[];
-        let newPos: number[];
-        let playerTilePos: number[];
-        let distToPos: number;
         
         if (this.entSprite == null) {
             this.shouldDelete = true
@@ -237,18 +279,15 @@ class EnemyEntityObject {
         }
         
         let pos = [this.entSprite.x, this.entSprite.y]
-        let canSeePlayer = false
+        // canSeePlayer = False
         let distToPlayer = calcDistance(pos[0], pos[1], playerOne.x, playerOne.y)
-        if (distToPlayer <= 80) {
-            angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
-            result = raycast(pos[0], pos[1], angle, distToPos, SpriteKind.Player)
-            if (result.getHitType() == 2) {
-                canSeePlayer = true
-            }
-            
-            console.log(canSeePlayer)
-        }
-        
+        // if distToPlayer <= 80:
+        //     angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
+        //     result = raycast(pos[0], pos[1], angle, distToPos, SpriteKind.player)
+        // 
+        //     if result.getHitType() == 2:
+        //         canSeePlayer = True
+        //     print(canSeePlayer)
         this.doMovement()
         if (distToPlayer <= 50) {
             if (this.attackDelay >= 25) {
@@ -270,33 +309,27 @@ class EnemyEntityObject {
                 // So we going to scan the area. And use raycast to ensure we can move from the current position to the next.
                 // This is done to ensure the enemy can see where they're moving to.
                 // This is all done by tiles. They're 16x16 so dvide by 16.
-                prevDist = 1000
-                closestTile = null
-                for (let offsetX = -5; offsetX < 5; offsetX++) {
-                    for (let offsetY = -5; offsetY < 5; offsetY++) {
-                        entTilePos = [Math.floor(pos[0] / 16), Math.floor(pos[1] / 16)]
-                        newPos = [entTilePos[0] + offsetX, entTilePos[1] + offsetY]
-                        playerTilePos = [Math.floor(playerOne.x / 16), Math.floor(playerOne.y / 16)]
-                        // Raycast
-                        angle = calcAngle(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
-                        distToPos = calcDistance(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
-                        result = raycastTileMap(pos[0], pos[1], angle, distToPos)
-                        if (result.getHitType() == 0) {
-                            continue
-                        }
-                        
-                        distToPlayer = Math.floor(calcDistance(newPos[0], newPos[1], playerTilePos[0], playerTilePos[1]))
-                        if (distToPlayer < prevDist) {
-                            prevDist = distToPlayer
-                            closestTile = newPos
-                        }
-                        
-                    }
-                }
-                if (prevDist != 1000 || closestTile != null) {
-                    this.waypoint = [closestTile[0] * 16, closestTile[1] * 16]
-                    debugSprite.setPosition(Math.floor(closestTile[0] * 16), Math.floor(closestTile[1] * 16))
-                }
+                // Old movement code uses waypoints to move from poition to waypoint.
+                // prevDist = 1000
+                // closestTile = None
+                // for offsetX in range(-5, 5):
+                //     for offsetY in range(-5, 5):
+                //         entTilePos = ( Math.floor(pos[0] / 16), Math.floor(pos[1] / 16) )
+                //         newPos = ( (entTilePos[0]) + offsetX, (entTilePos[1]) + offsetY)
+                //         playerTilePos = ( Math.floor(playerOne.x / 16), Math.floor(playerOne.y / 16) )
+                // Raycast
+                // angle = calcAngle(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
+                // distToPos = calcDistance(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
+                // result = raycastTileMap(pos[0], pos[1], angle, distToPos)
+                // if(result.getHitType() == 0):
+                //     continue
+                // distToPlayer = Math.floor(calcDistance(newPos[0], newPos[1], playerTilePos[0], playerTilePos[1]))
+                // if distToPlayer < prevDist:
+                //     prevDist = distToPlayer
+                //     closestTile = newPos
+                // if prevDist != 1000 or closestTile != None:
+                //     self.waypoint = ((closestTile[0] * 16), (closestTile[1] * 16))
+                //     debugSprite.set_position((closestTile[0] * 16), (closestTile[1] * 16))
                 
             }
             
@@ -314,9 +347,6 @@ class EnemyEntityObject {
     // And each waypoint completes a raycast check to see if each points sees each other after eached staged move.
     // Velcity movement works just need implment this system.
     public doMovement() {
-        let angle: number;
-        let hitWall: boolean;
-        let result: RaycastResult;
         let vel: number[];
         if (this.entSprite == null || this.waypoint == null) {
             return
@@ -331,23 +361,9 @@ class EnemyEntityObject {
         let wy = this.waypoint[1]
         let distToPoint = calcDistance(toTilePos(cx), toTilePos(cy), toTilePos(wx), toTilePos(wy))
         if (distToPoint > 1) {
-            angle = calcAngle(cx, cy, wx, wy)
-            hitWall = false
-            for (let angleOffset of [16, 0, -16]) {
-                result = raycastTileMap(wx, wy, angle + angleOffset, distToPoint)
-                if (result.getHitType() == 0) {
-                    hitWall = true
-                }
-                
-            }
-            if (hitWall) {
-                this.waypoint = null
-            } else {
-                vel = movementVelocity(95, angle)
-                vx += -vel[0]
-                vy += -vel[1]
-            }
-            
+            vel = movementVelocity(90, calcAngle(cx, cy, wx, wy))
+            vx += -vel[0]
+            vy += -vel[1]
         } else {
             this.waypoint = null
         }
@@ -1192,7 +1208,7 @@ function raycastTileMap(posX: number, posY: number, angle: number, distance: num
 }
 
 // Shoots a raycast from a position. using angle and distance limiter.
-function raycast(posX: number, posY: number, angle: number, distance: number, spriteKind: number): RaycastResult {
+function raycast(posX: any, posY: any, angle: number, distance: number, spriteKind: any): RaycastResult {
     let currentPosX = posX
     let currentPosY = posY
     let step = 0
@@ -1324,6 +1340,7 @@ let debugSprite = sprites.create(assets.image`Waypoint_Debug`, SpriteKind.Debug)
 setLevel()
 offScreen()
 forever(function on_forever() {
+    // print(debugSprite.x + " | "+debugSprite.y)
     if (introComplete == false) {
         updateIntro()
     } else {

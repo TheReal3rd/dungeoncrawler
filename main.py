@@ -27,6 +27,15 @@ class LvlDoorData():
     def getPlayerPos(self):
         return self.playerPos
 
+class Node():
+    position = (0,0)
+    fromPosition = (0,0)
+
+
+    def __init__(self):
+        pass
+
+
 #Movement maybe an A* like movement system? however we have very little processing? So may not work well.
 #Maybe a split processing approach?
 #
@@ -41,7 +50,8 @@ class LvlDoorData():
 class EnemyEntityObject():
     pos = None
     vel = (0,0)
-    waypoint = (-1, -1)
+    nodes = []
+    nodesIndex = 0
     speed = 1
     entSprite = None
     textureID: number = -1
@@ -74,17 +84,17 @@ class EnemyEntityObject():
             return
         
         pos = (self.entSprite.x, self.entSprite.y)
-        canSeePlayer = False
+        #canSeePlayer = False
         distToPlayer = calcDistance(pos[0], pos[1], playerOne.x, playerOne.y)
 
-        if distToPlayer <= 80:
-            angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
-            result = raycast(pos[0], pos[1], angle, distToPos, SpriteKind.player)
+        #if distToPlayer <= 80:
+        #    angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
+        #    result = raycast(pos[0], pos[1], angle, distToPos, SpriteKind.player)
+        #
+        #    if result.getHitType() == 2:
+        #        canSeePlayer = True
 
-            if result.getHitType() == 2:
-                canSeePlayer = True
-
-            print(canSeePlayer)
+        #    print(canSeePlayer)
 
         self.doMovement()
         
@@ -108,32 +118,36 @@ class EnemyEntityObject():
                     #So we going to scan the area. And use raycast to ensure we can move from the current position to the next.
                     #This is done to ensure the enemy can see where they're moving to.
                     #This is all done by tiles. They're 16x16 so dvide by 16.
-                    prevDist = 1000
-                    closestTile = None
-                    for offsetX in range(-5, 5):
-                        for offsetY in range(-5, 5):
-                            entTilePos = ( Math.floor(pos[0] / 16), Math.floor(pos[1] / 16) )
-                            newPos = ( (entTilePos[0]) + offsetX, (entTilePos[1]) + offsetY)
-                            playerTilePos = ( Math.floor(playerOne.x / 16), Math.floor(playerOne.y / 16) )
+
+                    #Old movement code uses waypoints to move from poition to waypoint.
+                    #prevDist = 1000
+                    #closestTile = None
+                    #for offsetX in range(-5, 5):
+                    #    for offsetY in range(-5, 5):
+                    #        entTilePos = ( Math.floor(pos[0] / 16), Math.floor(pos[1] / 16) )
+                    #        newPos = ( (entTilePos[0]) + offsetX, (entTilePos[1]) + offsetY)
+                    #        playerTilePos = ( Math.floor(playerOne.x / 16), Math.floor(playerOne.y / 16) )
 
                             #Raycast
-                            angle = calcAngle(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
-                            distToPos = calcDistance(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
+                            #angle = calcAngle(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
+                            #distToPos = calcDistance(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
 
-                            result = raycastTileMap(pos[0], pos[1], angle, distToPos)
+                            #result = raycastTileMap(pos[0], pos[1], angle, distToPos)
 
-                            if(result.getHitType() == 0):
-                                continue
+                            #if(result.getHitType() == 0):
+                            #    continue
 
-                            distToPlayer = Math.floor(calcDistance(newPos[0], newPos[1], playerTilePos[0], playerTilePos[1]))
-                            if distToPlayer < prevDist:
-                                prevDist = distToPlayer
-                                closestTile = newPos
+                            #distToPlayer = Math.floor(calcDistance(newPos[0], newPos[1], playerTilePos[0], playerTilePos[1]))
+                            #if distToPlayer < prevDist:
+                            #    prevDist = distToPlayer
+                            #    closestTile = newPos
 
-                    if prevDist != 1000 or closestTile != None:
-                        self.waypoint = (closestTile[0] * 16, closestTile[1] * 16)
+                    #if prevDist != 1000 or closestTile != None:
+                    #    self.waypoint = ((closestTile[0] * 16), (closestTile[1] * 16))
 
-                        debugSprite.set_position(Math.floor(closestTile[0] * 16), Math.floor(closestTile[1] * 16))
+                    #    debugSprite.set_position((closestTile[0] * 16), (closestTile[1] * 16))
+
+                    pass
 
         if self.pos == None:
             self.entSprite.setPosition(self.pos[0], self.pos[1])
@@ -156,21 +170,10 @@ class EnemyEntityObject():
         wx = self.waypoint[0]
         wy = self.waypoint[1]
         distToPoint = calcDistance(toTilePos(cx), toTilePos(cy), toTilePos(wx), toTilePos(wy))
-        if distToPoint > 1:
-            angle = calcAngle(cx, cy, wx, wy)
-
-            hitWall = False
-            for angleOffset in (16, 0, -16):
-                result = raycastTileMap(wx, wy, angle + angleOffset, distToPoint)
-                if(result.getHitType() == 0):
-                    hitWall = True
-
-            if(hitWall):
-                self.waypoint = None
-            else:
-                vel = movementVelocity(95, angle)
-                vx += -vel[0]
-                vy += -vel[1]
+        if distToPoint > 1:  
+            vel = movementVelocity(90, calcAngle(cx, cy, wx, wy))
+            vx += -vel[0]
+            vy += -vel[1]
         else:
             self.waypoint = None
 
@@ -907,6 +910,7 @@ debugSprite = sprites.create(assets.image("""Waypoint_Debug"""), SpriteKind.Debu
 setLevel()
 offScreen()
 def on_forever():
+    #print(debugSprite.x + " | "+debugSprite.y)
     if introComplete == False:
         updateIntro();
     else:
