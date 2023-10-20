@@ -118,36 +118,38 @@ class EnemyEntityObject():
                     #This is done to ensure the enemy can see where they're moving to.
                     #This is all done by tiles. They're 16x16 so dvide by 16.
 
-                    #Old movement code uses waypoints to move from poition to waypoint.
-                    #prevDist = 1000
-                    #closestTile = None
-                    #for offsetX in range(-5, 5):
-                    #    for offsetY in range(-5, 5):
-                    #        entTilePos = ( Math.floor(pos[0] / 16), Math.floor(pos[1] / 16) )
-                    #        newPos = ( (entTilePos[0]) + offsetX, (entTilePos[1]) + offsetY)
-                    #        playerTilePos = ( Math.floor(playerOne.x / 16), Math.floor(playerOne.y / 16) )
+                    waypointList = []
+                    currentPos = self.getPos()
+                    maxIterations = 100 # NASA style
+                    searchDepth = 0
+                    while searchDepth != 2:
+                        maxIterations -= 1
 
-                            #Raycast
-                            #angle = calcAngle(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
-                            #distToPos = calcDistance(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
+                        closestTile = None
+                        closestDistance = 1000
+                        for offsetX in range(-5, 5):
+                            for offsetY in range(-5, 5):
 
-                            #result = raycastTileMap(pos[0], pos[1], angle, distToPos)
+                                entityTilePos = ( toTilePos(currentPos[0]), toTilePos(currentPos[1]) )
+                                newTilePos = ( entityTilePos[0] + offsetX, entityTilePos[1] + offsetY )
 
-                            #if(result.getHitType() == 0):
-                            #    continue
+                                #Raycast
+                                angle = calcAngle(entityTilePos[0], entityTilePos[1], newTilePos[0], newTilePos[1])
+                                distToPos = calcDistance(entityTilePos[0], entityTilePos[1], newTilePos[0], newTilePos[1])
 
-                            #distToPlayer = Math.floor(calcDistance(newPos[0], newPos[1], playerTilePos[0], playerTilePos[1]))
-                            #if distToPlayer < prevDist:
-                            #    prevDist = distToPlayer
-                            #    closestTile = newPos
+                                raycastResult = raycastTileMap(currentPos[0], currentPos[1], angle, distToPos)
 
-                    #if prevDist != 1000 or closestTile != None:
-                    #    self.waypoint = ((closestTile[0] * 16), (closestTile[1] * 16))
+                                if raycastResult.getHitType() == 0:
+                                    continue
 
-                    #    debugSprite.set_position((closestTile[0] * 16), (closestTile[1] * 16))
+                                distToPlayer = calcDistance(newTilePos[0], newTilePos[1], toTilePos(playerOne.x), toTilePos(playerOne.y))
+                                if distToPlayer < closestDistance:
+                                    closestDistance = distToPlayer
+                                    closestTile = newTilePos
 
-                    pass
-
+                        if closestDistance != 1000 or closestTile != None:
+                            waypointList.append(closestTile)
+                            currentPos = closestTile
         if self.pos == None:
             self.entSprite.setPosition(self.pos[0], self.pos[1])
 
@@ -158,7 +160,11 @@ class EnemyEntityObject():
     #And each waypoint completes a raycast check to see if each points sees each other after eached staged move.
     #Velcity movement works just need implment this system.
     def doMovement(self):
-        if self.entSprite == None or len(self.waypoint) <= 0:
+        if self.entSprite == None or len(self.waypoint) == 0:
+            return
+
+        if len(self.waypoint) <= self.waypointIndex:
+            self.waypoint = []
             return
 
         currentWaypoint = self.waypoint[self.waypointIndex]
@@ -169,6 +175,9 @@ class EnemyEntityObject():
         cy = pos[1]
         wx = currentWaypoint[0]
         wy = currentWaypoint[1]
+
+        debugSprite.set_position((wx), (wy))
+
         distToPoint = calcDistance(toTilePos(cx), toTilePos(cy), toTilePos(wx), toTilePos(wy))
         if distToPoint > 1:  
             vel = movementVelocity(90, calcAngle(cx, cy, wx, wy))
@@ -373,7 +382,7 @@ def updatePlayer():
             playerFrameIndex += 1
             if playerFrameIndex >= 4:
                 playerFrameIndex = 0
-            #print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
+            print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
         # Set frame
         playerOne.set_image(playerFrames[playerFrameIndex + playerFrameOffsetIndex])
         # END Movement

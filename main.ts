@@ -263,6 +263,16 @@ class EnemyEntityObject {
         let velX: number;
         let velY: number;
         let temp: Sprite;
+        let waypointList: any[];
+        let currentPos: number[];
+        let maxIterations: number;
+        let searchDepth: number;
+        let closestTile: number[];
+        let closestDistance: number;
+        let entityTilePos: number[];
+        let newTilePos: number[];
+        let distToPos: number;
+        let raycastResult: RaycastResult;
         
         if (this.entSprite == null) {
             this.shouldDelete = true
@@ -307,28 +317,41 @@ class EnemyEntityObject {
                 // So we going to scan the area. And use raycast to ensure we can move from the current position to the next.
                 // This is done to ensure the enemy can see where they're moving to.
                 // This is all done by tiles. They're 16x16 so dvide by 16.
-                // Old movement code uses waypoints to move from poition to waypoint.
-                // prevDist = 1000
-                // closestTile = None
-                // for offsetX in range(-5, 5):
-                //     for offsetY in range(-5, 5):
-                //         entTilePos = ( Math.floor(pos[0] / 16), Math.floor(pos[1] / 16) )
-                //         newPos = ( (entTilePos[0]) + offsetX, (entTilePos[1]) + offsetY)
-                //         playerTilePos = ( Math.floor(playerOne.x / 16), Math.floor(playerOne.y / 16) )
-                // Raycast
-                // angle = calcAngle(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
-                // distToPos = calcDistance(entTilePos[0], entTilePos[1], newPos[0], newPos[1])
-                // result = raycastTileMap(pos[0], pos[1], angle, distToPos)
-                // if(result.getHitType() == 0):
-                //     continue
-                // distToPlayer = Math.floor(calcDistance(newPos[0], newPos[1], playerTilePos[0], playerTilePos[1]))
-                // if distToPlayer < prevDist:
-                //     prevDist = distToPlayer
-                //     closestTile = newPos
-                // if prevDist != 1000 or closestTile != None:
-                //     self.waypoint = ((closestTile[0] * 16), (closestTile[1] * 16))
-                //     debugSprite.set_position((closestTile[0] * 16), (closestTile[1] * 16))
-                
+                waypointList = []
+                currentPos = this.getPos()
+                maxIterations = 100
+                //  NASA style
+                searchDepth = 0
+                while (searchDepth != 2) {
+                    maxIterations -= 1
+                    closestTile = null
+                    closestDistance = 1000
+                    for (let offsetX = -5; offsetX < 5; offsetX++) {
+                        for (let offsetY = -5; offsetY < 5; offsetY++) {
+                            entityTilePos = [toTilePos(currentPos[0]), toTilePos(currentPos[1])]
+                            newTilePos = [entityTilePos[0] + offsetX, entityTilePos[1] + offsetY]
+                            // Raycast
+                            angle = calcAngle(entityTilePos[0], entityTilePos[1], newTilePos[0], newTilePos[1])
+                            distToPos = calcDistance(entityTilePos[0], entityTilePos[1], newTilePos[0], newTilePos[1])
+                            raycastResult = raycastTileMap(currentPos[0], currentPos[1], angle, distToPos)
+                            if (raycastResult.getHitType() == 0) {
+                                continue
+                            }
+                            
+                            distToPlayer = calcDistance(newTilePos[0], newTilePos[1], toTilePos(playerOne.x), toTilePos(playerOne.y))
+                            if (distToPlayer < closestDistance) {
+                                closestDistance = distToPlayer
+                                closestTile = newTilePos
+                            }
+                            
+                        }
+                    }
+                    if (closestDistance != 1000 || closestTile != null) {
+                        waypointList.push(closestTile)
+                        currentPos = closestTile
+                    }
+                    
+                }
             }
             
         }
@@ -346,7 +369,12 @@ class EnemyEntityObject {
     // Velcity movement works just need implment this system.
     public doMovement() {
         let vel: number[];
-        if (this.entSprite == null || this.waypoint.length <= 0) {
+        if (this.entSprite == null || this.waypoint.length == 0) {
+            return
+        }
+        
+        if (this.waypoint.length <= this.waypointIndex) {
+            this.waypoint = []
             return
         }
         
@@ -358,6 +386,7 @@ class EnemyEntityObject {
         let cy = pos[1]
         let wx = currentWaypoint[0]
         let wy = currentWaypoint[1]
+        debugSprite.setPosition(wx, wy)
         let distToPoint = calcDistance(toTilePos(cx), toTilePos(cy), toTilePos(wx), toTilePos(wy))
         if (distToPoint > 1) {
             vel = movementVelocity(90, calcAngle(cx, cy, wx, wy))
@@ -754,9 +783,9 @@ function updatePlayer() {
                 playerFrameIndex = 0
             }
             
+            console.log("X: " + playerOne.x + " Y: " + playerOne.y + " TileMap[X: " + Math.trunc(playerOne.x / 16) + " Y: " + Math.trunc(playerOne.y / 16) + "]")
         }
         
-        // print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
         //  Set frame
         playerOne.setImage(playerFrames[playerFrameIndex + playerFrameOffsetIndex])
         //  END Movement
