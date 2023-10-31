@@ -117,6 +117,17 @@ waypointNode.__initwaypointNode()
 //  1 = Iron_Golem
 //  2 = 
 class EnemyEntityObject {
+    static waypoint: number[]
+    private ___waypoint_is_set: boolean
+    private ___waypoint: number[]
+    get waypoint(): number[] {
+        return this.___waypoint_is_set ? this.___waypoint : EnemyEntityObject.waypoint
+    }
+    set waypoint(value: number[]) {
+        this.___waypoint_is_set = true
+        this.___waypoint = value
+    }
+    
     static textureID: number
     private ___textureID_is_set: boolean
     private ___textureID: number
@@ -183,17 +194,6 @@ class EnemyEntityObject {
         this.___attackDelay = value
     }
     
-    static waypoint: any[]
-    private ___waypoint_is_set: boolean
-    private ___waypoint: any[]
-    get waypoint(): any[] {
-        return this.___waypoint_is_set ? this.___waypoint : EnemyEntityObject.waypoint
-    }
-    set waypoint(value: any[]) {
-        this.___waypoint_is_set = true
-        this.___waypoint = value
-    }
-    
     static vel: number[]
     private ___vel_is_set: boolean
     private ___vel: number[]
@@ -203,17 +203,6 @@ class EnemyEntityObject {
     set vel(value: number[]) {
         this.___vel_is_set = true
         this.___vel = value
-    }
-    
-    static waypointIndex: number
-    private ___waypointIndex_is_set: boolean
-    private ___waypointIndex: number
-    get waypointIndex(): number {
-        return this.___waypointIndex_is_set ? this.___waypointIndex : EnemyEntityObject.waypointIndex
-    }
-    set waypointIndex(value: number) {
-        this.___waypointIndex_is_set = true
-        this.___waypointIndex = value
     }
     
     static speed: number
@@ -230,8 +219,7 @@ class EnemyEntityObject {
     public static __initEnemyEntityObject() {
         EnemyEntityObject.pos = null
         EnemyEntityObject.vel = [0, 0]
-        EnemyEntityObject.waypoint = []
-        EnemyEntityObject.waypointIndex = 0
+        EnemyEntityObject.waypoint = [0, 0]
         EnemyEntityObject.speed = 1
         EnemyEntityObject.entSprite = null
         EnemyEntityObject.textureID = -1
@@ -242,6 +230,7 @@ class EnemyEntityObject {
     
     // Sum reason using msDelay doesn't work? Like it only allows one enemy to shoot at a time.
     constructor(textureID: number) {
+        this.waypoint = null
         this.textureID = textureID
         // """En_Witch_Idle"""
         if (textureID == 0) {
@@ -263,16 +252,6 @@ class EnemyEntityObject {
         let velX: number;
         let velY: number;
         let temp: Sprite;
-        let waypointList: any[];
-        let currentPos: number[];
-        let maxIterations: number;
-        let searchDepth: number;
-        let closestTile: number[];
-        let closestDistance: number;
-        let entityTilePos: number[];
-        let newTilePos: number[];
-        let distToPos: number;
-        let raycastResult: RaycastResult;
         
         if (this.entSprite == null) {
             this.shouldDelete = true
@@ -312,50 +291,14 @@ class EnemyEntityObject {
                 this.attackDelay += 1
             }
             
-        } else if (distToPlayer <= 80 && this.waypoint == null) {
+        } else if (distToPlayer <= 80 && this.waypoint.length <= 0) {
             if (distToPlayer >= 20) {
-                // So we going to scan the area. And use raycast to ensure we can move from the current position to the next.
-                // This is done to ensure the enemy can see where they're moving to.
-                // This is all done by tiles. They're 16x16 so dvide by 16.
-                waypointList = []
-                currentPos = this.getPos()
-                maxIterations = 100
-                //  NASA style
-                searchDepth = 0
-                while (searchDepth != 2) {
-                    maxIterations -= 1
-                    closestTile = null
-                    closestDistance = 1000
-                    for (let offsetX = -5; offsetX < 5; offsetX++) {
-                        for (let offsetY = -5; offsetY < 5; offsetY++) {
-                            entityTilePos = [toTilePos(currentPos[0]), toTilePos(currentPos[1])]
-                            newTilePos = [entityTilePos[0] + offsetX, entityTilePos[1] + offsetY]
-                            // Raycast
-                            angle = calcAngle(entityTilePos[0], entityTilePos[1], newTilePos[0], newTilePos[1])
-                            distToPos = calcDistance(entityTilePos[0], entityTilePos[1], newTilePos[0], newTilePos[1])
-                            raycastResult = raycastTileMap(currentPos[0], currentPos[1], angle, distToPos)
-                            if (raycastResult.getHitType() == 0) {
-                                continue
-                            }
-                            
-                            distToPlayer = calcDistance(newTilePos[0], newTilePos[1], toTilePos(playerOne.x), toTilePos(playerOne.y))
-                            if (distToPlayer < closestDistance) {
-                                closestDistance = distToPlayer
-                                closestTile = newTilePos
-                            }
-                            
-                        }
-                    }
-                    if (closestDistance != 1000 || closestTile != null) {
-                        waypointList.push(closestTile)
-                        currentPos = closestTile
-                    }
-                    
-                }
+                
             }
             
         }
         
+        // Pathing here
         if (this.pos == null) {
             this.entSprite.setPosition(this.pos[0], this.pos[1])
         }
@@ -366,34 +309,26 @@ class EnemyEntityObject {
     // Okay if we use a waypoint system and then the waypoint is gened past a wall it'll fail.
     // So what about a A* like pathing but that simplifies it self to waypoints list.
     // And each waypoint completes a raycast check to see if each points sees each other after eached staged move.
-    // Velcity movement works just need implment this system.
+    // Velocity movement works just need implment this system.
     public doMovement() {
         let vel: number[];
-        if (this.entSprite == null || this.waypoint.length == 0) {
+        if (this.entSprite == null || this.waypoint == null) {
             return
         }
         
-        if (this.waypoint.length <= this.waypointIndex) {
-            this.waypoint = []
-            return
-        }
-        
-        let currentWaypoint = this.waypoint[this.waypointIndex]
         let pos = this.getPos()
         let vx = 0
         let vy = 0
         let cx = pos[0]
         let cy = pos[1]
-        let wx = currentWaypoint[0]
-        let wy = currentWaypoint[1]
+        let wx = this.waypoint[0]
+        let wy = this.waypoint[1]
         debugSprite.setPosition(wx, wy)
         let distToPoint = calcDistance(toTilePos(cx), toTilePos(cy), toTilePos(wx), toTilePos(wy))
         if (distToPoint > 1) {
             vel = movementVelocity(90, calcAngle(cx, cy, wx, wy))
             vx += -vel[0]
             vy += -vel[1]
-        } else {
-            this.waypointIndex += 1
         }
         
         this.vel[0] = vx
@@ -783,9 +718,9 @@ function updatePlayer() {
                 playerFrameIndex = 0
             }
             
-            console.log("X: " + playerOne.x + " Y: " + playerOne.y + " TileMap[X: " + Math.trunc(playerOne.x / 16) + " Y: " + Math.trunc(playerOne.y / 16) + "]")
         }
         
+        // print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
         //  Set frame
         playerOne.setImage(playerFrames[playerFrameIndex + playerFrameOffsetIndex])
         //  END Movement
