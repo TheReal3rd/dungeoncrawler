@@ -252,6 +252,14 @@ class EnemyEntityObject {
         let velX: number;
         let velY: number;
         let temp: Sprite;
+        let spritePos: number[];
+        let playerTilePos: number[];
+        let closestTilePos: number[];
+        let tileDistToPlayer: number;
+        let currentTilePos: number[];
+        let tempDist: number;
+        let tempAngle: number;
+        let result: RaycastResult;
         
         if (this.entSprite == null) {
             this.shouldDelete = true
@@ -281,7 +289,7 @@ class EnemyEntityObject {
                 angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
                 velX = Math.sin(toRadians(angle)) * 95
                 velY = Math.cos(toRadians(angle)) * 95
-                temp = sprites.create(assets.image`Witch_Attack`, SpriteKind.Projectile)
+                temp = sprites.create(assets.image`Witch_Attack`, SpriteKind.EnemyProjectile)
                 temp.setPosition(pos[0], pos[1])
                 temp.setVelocity(-velX, -velY)
                 temp.setFlag(SpriteFlag.AutoDestroy, true)
@@ -291,14 +299,45 @@ class EnemyEntityObject {
                 this.attackDelay += 1
             }
             
-        } else if (distToPlayer <= 80 && this.waypoint.length <= 0) {
+        } else if (distToPlayer <= 80 && this.waypoint == null) {
             if (distToPlayer >= 20) {
+                // Pathing START
+                spritePos = [this.entSprite.x, this.entSprite.y]
+                playerTilePos = [toTilePos(playerOne.x), toTilePos(playerOne.y)]
+                closestTilePos = null
+                tileDistToPlayer = 1000
+                for (let offsetX = -5; offsetX < 5; offsetX++) {
+                    for (let offsetY = -5; offsetY < 5; offsetY++) {
+                        currentTilePos = [toTilePos(this.entSprite.x) + offsetX, toTilePos(this.entSprite.y) + offsetY]
+                        // If its a wall skip we can't walk to it.
+                        if (tiles.tileAtLocationIsWall(tiles.getTileLocation(currentTilePos[0], currentTilePos[1]))) {
+                            continue
+                        }
+                        
+                        // Check whether we can see the tile.
+                        tempDist = calcDistance(currentTilePos[0], currentTilePos[1], playerTilePos[0], playerTilePos[1])
+                        tempAngle = calcAngle(currentTilePos[0], currentTilePos[1], playerTilePos[0], playerTilePos[1])
+                        result = raycastTileMap(spritePos[0], spritePos[1], tempAngle, tempDist)
+                        if (result.getHitType() == 1) {
+                            continue
+                        }
+                        
+                        if (tileDistToPlayer > tempDist) {
+                            tileDistToPlayer = tempDist
+                            closestTilePos = currentTilePos
+                        }
+                        
+                    }
+                }
+                if (closestTilePos != null && tileDistToPlayer != 1000) {
+                    this.waypoint = [closestTilePos[0] * 16 + 8, closestTilePos[1] * 16 + 8]
+                }
                 
             }
             
         }
         
-        // Pathing here
+        // Pathing END
         if (this.pos == null) {
             this.entSprite.setPosition(this.pos[0], this.pos[1])
         }
@@ -324,11 +363,13 @@ class EnemyEntityObject {
         let wx = this.waypoint[0]
         let wy = this.waypoint[1]
         debugSprite.setPosition(wx, wy)
-        let distToPoint = calcDistance(toTilePos(cx), toTilePos(cy), toTilePos(wx), toTilePos(wy))
-        if (distToPoint > 1) {
+        let distToPoint = calcDistance(cx, cy, wx, wy)
+        if (distToPoint > 1.5) {
             vel = movementVelocity(90, calcAngle(cx, cy, wx, wy))
             vx += -vel[0]
             vy += -vel[1]
+        } else {
+            this.waypoint = null
         }
         
         this.vel[0] = vx
@@ -343,6 +384,7 @@ class EnemyEntityObject {
         this.entSprite = sprites.create(getEntityTexture(this.textureID), SpriteKind.Enemy)
         this.entSprite.setFlag(SpriteFlag.AutoDestroy, false)
         this.entSprite.setFlag(SpriteFlag.DestroyOnWall, false)
+        this.entSprite.setPosition(this.pos[0], this.pos[1])
         return this.entSprite
     }
     
@@ -631,6 +673,7 @@ namespace SpriteKind {
     export const Item = SpriteKind.create()
     export const Inventory = SpriteKind.create()
     export const PlayerProjectile = SpriteKind.create()
+    export const EnemyProjectile = SpriteKind.create()
     export const Debug = SpriteKind.create()
 }
 
@@ -960,6 +1003,7 @@ function updateEntities() {
         
     }
     
+    // Player Projectile loop
     for (let playerProj of sprites.allOfKind(SpriteKind.PlayerProjectile)) {
         dist = calcDistance(playerOne.x, playerOne.y, playerProj.x, playerProj.y)
         if (dist >= 60) {
@@ -968,6 +1012,19 @@ function updateEntities() {
         }
         
     }
+    // Enemy Projectile loop
+    for (let enemyProj of sprites.allOfKind(SpriteKind.EnemyProjectile)) {
+        dist = calcDistance(playerOne.x, playerOne.y, enemyProj.x, enemyProj.y)
+        if (dist >= 20) {
+            continue
+        }
+        
+        if (playerOne.overlapsWith(enemyProj)) {
+            info.changeLifeBy(-1)
+        }
+        
+    }
+    // Entity update
     for (let ent of enemyList) {
         ent.update()
     }
@@ -1019,7 +1076,7 @@ function getLevelEnemyData(): EnemySpawnPointData[] {
     
     // #Level 1 (0) will have no enemies.
     if (levelID == 1) {
-        return [new EnemySpawnPointData("HallWay1", [5, 12], 8, 4, [0, 0])]
+        return [new EnemySpawnPointData("HallWay1", [5, 12], 8, 4, [0])]
     } else {
         return []
     }
@@ -1162,6 +1219,7 @@ function raycastTileMap(posX: number, posY: number, angle: number, distance: num
         currentPosX += Math.round(1 * cos)
         currentPosY += Math.round(1 * sin)
         step += 1
+        // debugSprite.set_position((currentPosX * 16), (currentPosY * 16))
         if (tiles.tileAtLocationIsWall(tiles.getTileLocation(currentPosX, currentPosY))) {
             return new RaycastResult([posX, posY], [currentPosX, currentPosY], 1)
         }

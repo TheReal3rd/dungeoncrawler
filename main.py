@@ -103,7 +103,7 @@ class EnemyEntityObject():
                 velX = Math.sin(toRadians(angle)) * 95
                 velY = Math.cos(toRadians(angle)) * 95
 
-                temp = sprites.create(assets.image("""Witch_Attack"""), SpriteKind.projectile)
+                temp = sprites.create(assets.image("""Witch_Attack"""), SpriteKind.EnemyProjectile)
                 temp.set_position(pos[0], pos[1])
                 temp.set_velocity(-velX, -velY)
                 temp.set_flag(SpriteFlag.AUTO_DESTROY, True)
@@ -112,9 +112,40 @@ class EnemyEntityObject():
             else:
                 self.attackDelay +=1
         else:
-            if(distToPlayer <= 80 and len(self.waypoint) <= 0):
+            if(distToPlayer <= 80 and self.waypoint == None):
                 if (distToPlayer >= 20):
-                    pass#Pathing here
+                    #Pathing START
+
+                    spritePos = (self.entSprite.x, self.entSprite.y)
+                    playerTilePos = (toTilePos(playerOne.x), toTilePos(playerOne.y))
+                    closestTilePos = None
+                    tileDistToPlayer = 1000
+                    for offsetX in range(-5, 5):
+                        for offsetY in range(-5, 5):
+                            currentTilePos = (toTilePos(self.entSprite.x) + offsetX, toTilePos(self.entSprite.y) + offsetY)
+
+                            #If its a wall skip we can't walk to it.
+                            if tiles.tile_at_location_is_wall(tiles.get_tile_location(currentTilePos[0], currentTilePos[1])):
+                                continue
+
+                            #Check whether we can see the tile.
+                            tempDist = calcDistance(currentTilePos[0], currentTilePos[1], playerTilePos[0], playerTilePos[1])
+                            tempAngle = calcAngle(currentTilePos[0], currentTilePos[1], playerTilePos[0], playerTilePos[1])
+
+                            result = raycastTileMap(spritePos[0], spritePos[1], tempAngle, tempDist)
+                            if result.getHitType() == 1:
+                                continue
+
+                            if tileDistToPlayer > tempDist:
+                                tileDistToPlayer = tempDist
+                                closestTilePos = currentTilePos
+
+                    if closestTilePos != None and tileDistToPlayer != 1000:
+                        self.waypoint = ( (closestTilePos[0] * 16) + 8, (closestTilePos[1] * 16) + 8)
+
+
+                    #Pathing END
+
         if self.pos == None:
             self.entSprite.setPosition(self.pos[0], self.pos[1])
 
@@ -138,11 +169,13 @@ class EnemyEntityObject():
 
         debugSprite.set_position((wx), (wy))
 
-        distToPoint = calcDistance(toTilePos(cx), toTilePos(cy), toTilePos(wx), toTilePos(wy))
-        if distToPoint > 1:  
+        distToPoint = calcDistance(cx, cy, wx, wy)
+        if distToPoint > 1.5:  
             vel = movementVelocity(90, calcAngle(cx, cy, wx, wy))
             vx += -vel[0]
             vy += -vel[1]
+        else:
+            self.waypoint = None
 
         self.vel[0] = vx
         self.vel[1] = vy
@@ -154,6 +187,7 @@ class EnemyEntityObject():
         self.entSprite = sprites.create(getEntityTexture(self.textureID), SpriteKind.Enemy)
         self.entSprite.set_flag(SpriteFlag.AUTO_DESTROY, False)
         self.entSprite.set_flag(SpriteFlag.DESTROY_ON_WALL, False)
+        self.entSprite.set_position(self.pos[0], self.pos[1])
         return self.entSprite
         
 #Holds Levels Spawn Point data that then uses EnemySpawn Data.
@@ -281,6 +315,7 @@ class SpriteKind:
     Item = SpriteKind.create()
     Inventory = SpriteKind.create()
     PlayerProjectile = SpriteKind.create()
+    EnemyProjectile = SpriteKind.create()
     Debug = SpriteKind.create()
 
 def updatePlayer():
@@ -519,12 +554,24 @@ def updateEntities():
         else:
             pickupPrompt.set_position(prompter.x, prompter.y - pickupPrompt.height * 2)
 
+    #Player Projectile loop
     for playerProj in sprites.all_of_kind(SpriteKind.PlayerProjectile):
         dist = calcDistance(playerOne.x, playerOne.y, playerProj.x, playerProj.y)
         if dist >= 60:
             sprites.destroy(playerProj)
             break
 
+    #Enemy Projectile loop
+    for enemyProj in sprites.all_of_kind(SpriteKind.EnemyProjectile):
+        dist = calcDistance(playerOne.x, playerOne.y, enemyProj.x, enemyProj.y)
+        if dist >= 20:
+            continue
+
+        if playerOne.overlaps_with(enemyProj):
+            info.change_life_by(-1)
+
+
+    #Entity update
     for ent in enemyList:
         ent.update()
 
@@ -580,7 +627,7 @@ def getLevelEnemyData():#No point to add Cache as its called once anyway. So the
     ##Level 1 (0) will have no enemies.
     if levelID == 1:
         return [
-            EnemySpawnPointData("HallWay1", (5,12), 8, 4, [0,0])
+            EnemySpawnPointData("HallWay1", (5,12), 8, 4, [0])
         ]
     else:
         return []
@@ -698,9 +745,11 @@ def raycastTileMap(posX, posY, angle, distance):
         currentPosY += Math.round(1 * sin)
         step += 1
 
+        #debugSprite.set_position((currentPosX * 16), (currentPosY * 16))
+
         if(tiles.tile_at_location_is_wall(tiles.get_tile_location(currentPosX, currentPosY))):
             return RaycastResult((posX, posY), (currentPosX, currentPosY), 1)
-
+       
     return RaycastResult((posX, posY), (currentPosX, currentPosY), 0)
 
 #Shoots a raycast from a position. using angle and distance limiter.
