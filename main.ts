@@ -234,7 +234,7 @@ class EnemyEntityObject {
         this.textureID = textureID
         // """En_Witch_Idle"""
         if (textureID == 0) {
-            this.health = 50
+            this.health = 3
         }
         
     }
@@ -276,13 +276,6 @@ class EnemyEntityObject {
         let pos = [this.entSprite.x, this.entSprite.y]
         // canSeePlayer = False
         let distToPlayer = calcDistance(pos[0], pos[1], playerOne.x, playerOne.y)
-        // if distToPlayer <= 80:
-        //     angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
-        //     result = raycast(pos[0], pos[1], angle, distToPos, SpriteKind.player)
-        // 
-        //     if result.getHitType() == 2:
-        //         canSeePlayer = True
-        //     print(canSeePlayer)
         this.doMovement()
         if (distToPlayer <= 50) {
             if (this.attackDelay >= 25) {
@@ -345,10 +338,6 @@ class EnemyEntityObject {
         this.entSprite.setVelocity(this.vel[0], this.vel[1])
     }
     
-    // Okay if we use a waypoint system and then the waypoint is gened past a wall it'll fail.
-    // So what about a A* like pathing but that simplifies it self to waypoints list.
-    // And each waypoint completes a raycast check to see if each points sees each other after eached staged move.
-    // Velocity movement works just need implment this system.
     public doMovement() {
         let vel: number[];
         if (this.entSprite == null || this.waypoint == null) {
@@ -362,7 +351,6 @@ class EnemyEntityObject {
         let cy = pos[1]
         let wx = this.waypoint[0]
         let wy = this.waypoint[1]
-        debugSprite.setPosition(wx, wy)
         let distToPoint = calcDistance(cx, cy, wx, wy)
         if (distToPoint > 1.5) {
             vel = movementVelocity(90, calcAngle(cx, cy, wx, wy))
@@ -561,7 +549,6 @@ function executeAction(actionID: number) {
     let projImage: Image;
     let playerProj: Sprite;
     let itemID2: number;
-    let result: RaycastResult;
     
     if (actionID == 0) {
         //  Inventory
@@ -609,15 +596,6 @@ function executeAction(actionID: number) {
             }
             
         }
-    } else if (actionID == 3) {
-        result = raycastTileMap(playerOne.x, playerOne.y, 0, 10)
-        console.log(result.getHitType())
-        if (result.getHitType() == 1) {
-            sendNotify("Hit Wall.")
-        } else {
-            sendNotify("Hit nothing")
-        }
-        
     }
     
 }
@@ -1013,17 +991,21 @@ function updateEntities() {
         
     }
     // Enemy Projectile loop
-    for (let enemyProj of sprites.allOfKind(SpriteKind.EnemyProjectile)) {
-        dist = calcDistance(playerOne.x, playerOne.y, enemyProj.x, enemyProj.y)
-        if (dist >= 20) {
-            continue
+    if (playerHurtDelay.passedMSNoReset(1000)) {
+        for (let enemyProj of sprites.allOfKind(SpriteKind.EnemyProjectile)) {
+            dist = calcDistance(playerOne.x, playerOne.y, enemyProj.x, enemyProj.y)
+            if (dist >= 20) {
+                continue
+            }
+            
+            if (playerOne.overlapsWith(enemyProj)) {
+                info.changeLifeBy(-1)
+                playerHurtDelay.reset()
+            }
+            
         }
-        
-        if (playerOne.overlapsWith(enemyProj)) {
-            info.changeLifeBy(-1)
-        }
-        
     }
+    
     // Entity update
     for (let ent of enemyList) {
         ent.update()
@@ -1288,8 +1270,7 @@ function fCost(startPos: any, currentPos: any, endPos: any) {
 // ## Maths Funcs END
 // Level info START
 let levelSizes = [50, 26]
-let levelID = 1
-// TODO remember to set back to 0 when done.
+let levelID = 0
 let spawnedAreas : String[] = []
 // Yes kinda cringe but a bool didn't work. So this stores the NameID of areas that have spawned its enemies.
 let enemyList : EnemyEntityObject[] = []
@@ -1311,7 +1292,7 @@ let playerInventory = [3, 1, 2, 5]
 // Inventory END
 //  Action START
 let actionSelectIndex = 0
-let actionsStrings = ["Inventory", "Attack", "Health Item", "TEST Raycast"]
+let actionsStrings = ["Inventory", "Attack", "Health Item"]
 let actionSwapDelay = new msDelay()
 //  Action END
 //  Sprites START
@@ -1334,6 +1315,7 @@ let playerAttack = 1
 let playerDefense = 1
 let playerAttackDelay = new msDelay()
 let playerAnimDelay = new msDelay()
+let playerHurtDelay = new msDelay()
 //  Player Stats END
 //  Vars MUL START
 pickupPrompt.setPosition(-1000, -1000)
@@ -1341,11 +1323,10 @@ scene.setBackgroundColor(2)
 game.stats = true
 info.setLife(3)
 scene.cameraFollowSprite(playerOne)
-playerOne.setPosition(40, 40)
-// Original 0, 261
+playerOne.setPosition(0, 261)
 //  Vars MUL END
 //  Intro Vars and Funcs START
-let introComplete = true
+let introComplete = false
 // TODO set to original
 function updateIntro() {
     // 21
@@ -1368,7 +1349,7 @@ function updateIntro() {
 }
 
 //  Intro Vars and Funcs END
-let debugSprite = sprites.create(assets.image`Waypoint_Debug`, SpriteKind.Debug)
+// debugSprite = sprites.create(assets.image("""Waypoint_Debug"""), SpriteKind.Debug)
 setLevel()
 offScreen()
 forever(function on_forever() {

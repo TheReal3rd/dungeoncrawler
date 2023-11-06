@@ -62,7 +62,7 @@ class EnemyEntityObject():
         self.waypoint = None
         self.textureID = textureID #"""En_Witch_Idle"""
         if textureID == 0:
-            self.health = 50
+            self.health = 3
         
     def setPos(self, pos):
         self.pos = pos
@@ -85,15 +85,6 @@ class EnemyEntityObject():
         pos = (self.entSprite.x, self.entSprite.y)
         #canSeePlayer = False
         distToPlayer = calcDistance(pos[0], pos[1], playerOne.x, playerOne.y)
-
-        #if distToPlayer <= 80:
-        #    angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
-        #    result = raycast(pos[0], pos[1], angle, distToPos, SpriteKind.player)
-        #
-        #    if result.getHitType() == 2:
-        #        canSeePlayer = True
-
-        #    print(canSeePlayer)
 
         self.doMovement()
         
@@ -151,10 +142,6 @@ class EnemyEntityObject():
 
         self.entSprite.set_velocity(self.vel[0], self.vel[1])
 
-    #Okay if we use a waypoint system and then the waypoint is gened past a wall it'll fail.
-    #So what about a A* like pathing but that simplifies it self to waypoints list.
-    #And each waypoint completes a raycast check to see if each points sees each other after eached staged move.
-    #Velocity movement works just need implment this system.
     def doMovement(self):
         if self.entSprite == None or self.waypoint == None:
             return
@@ -166,8 +153,6 @@ class EnemyEntityObject():
         cy = pos[1]
         wx = self.waypoint[0]
         wy = self.waypoint[1]
-
-        debugSprite.set_position((wx), (wy))
 
         distToPoint = calcDistance(cx, cy, wx, wy)
         if distToPoint > 1.5:  
@@ -281,13 +266,6 @@ def executeAction(actionID: number):
                     useItem(itemID2)
                     playerInventory[x3] = 0
                     break
-    elif actionID == 3:
-        result = raycastTileMap(playerOne.x, playerOne.y, 0, 10)
-        print(result.getHitType())
-        if result.getHitType() == 1:
-            sendNotify("Hit Wall.")
-        else:
-            sendNotify("Hit nothing")
 
 class msDelay():#This breaks blocks. and its annoying.
     time = 0
@@ -536,7 +514,7 @@ def onScreen():
 # This will update all nearby enemies alongside load them in and out.
 # So we check where the player is and if an enemy should be their spawn it in if it's not done already.
 def updateEntities():
-    global prompter
+    global prompter, playerHurtDelay
     # Items update
     if prompter == None:
         for item in sprites.all_of_kind(SpriteKind.Item):
@@ -562,19 +540,20 @@ def updateEntities():
             break
 
     #Enemy Projectile loop
-    for enemyProj in sprites.all_of_kind(SpriteKind.EnemyProjectile):
-        dist = calcDistance(playerOne.x, playerOne.y, enemyProj.x, enemyProj.y)
-        if dist >= 20:
-            continue
+    if playerHurtDelay.passedMSNoReset(1000):
+        for enemyProj in sprites.all_of_kind(SpriteKind.EnemyProjectile):
+            dist = calcDistance(playerOne.x, playerOne.y, enemyProj.x, enemyProj.y)
+            if dist >= 20:
+                continue
 
-        if playerOne.overlaps_with(enemyProj):
-            info.change_life_by(-1)
+            if playerOne.overlaps_with(enemyProj):
+                info.change_life_by(-1)
+                playerHurtDelay.reset()
 
 
     #Entity update
     for ent in enemyList:
         ent.update()
-
 
 def getEntityTexture(texID: number):
     if texID == 0:
@@ -809,7 +788,7 @@ def fCost(startPos, currentPos, endPos):
 
 #Level info START
 levelSizes = [ 50, 26 ]
-levelID = 1#TODO remember to set back to 0 when done.
+levelID = 0
 spawnedAreas: List[String] = []#Yes kinda cringe but a bool didn't work. So this stores the NameID of areas that have spawned its enemies.
 enemyList: List[EnemyEntityObject] = []
 droppedItemsTable = [["", "0"]]
@@ -855,7 +834,7 @@ playerInventory = [3, 1, 2, 5]
 
 # Action START
 actionSelectIndex = 0
-actionsStrings = ["Inventory", "Attack", "Health Item", "TEST Raycast"]
+actionsStrings = ["Inventory", "Attack", "Health Item"]
 actionSwapDelay = msDelay()
 # Action END
 
@@ -896,6 +875,7 @@ playerAttack = 1
 playerDefense = 1
 playerAttackDelay = msDelay()
 playerAnimDelay = msDelay()
+playerHurtDelay = msDelay()
 # Player Stats END
 
 
@@ -906,13 +886,13 @@ scene.set_background_color(2)
 game.stats = True
 info.set_life(3)
 scene.camera_follow_sprite(playerOne)
-playerOne.setPosition(40, 40) #Original 0, 261
+playerOne.setPosition(0, 261)
 # Vars MUL END
 
 
 
 # Intro Vars and Funcs START
-introComplete = True#TODO set to original
+introComplete = False#TODO set to original
 
 def updateIntro():#21
     global introComplete, playerFrameIndex, playerAnimDelay, playerOne
@@ -930,7 +910,7 @@ def updateIntro():#21
 
 # Intro Vars and Funcs END
 
-debugSprite = sprites.create(assets.image("""Waypoint_Debug"""), SpriteKind.Debug)
+#debugSprite = sprites.create(assets.image("""Waypoint_Debug"""), SpriteKind.Debug)
 
 setLevel()
 offScreen()
