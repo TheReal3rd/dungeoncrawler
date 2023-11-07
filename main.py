@@ -1,5 +1,5 @@
 # TODO list:
-# 1. Create enemies. (Spawning, Movement and attacking is done.)
+# 1. Add movement frames to the enemies. add health bars too.
 # 2. Create Levels. -> TODO create more levels then.
 # 3. Add player stats attack, defense and more.
 # Low Prio list:
@@ -36,13 +36,6 @@ class waypointNode():
         pass
 
 
-#Movement maybe an A* like movement system? however we have very little processing? So may not work well.
-#Maybe a split processing approach?
-#
-# Check whether entity needs to move if so move it. then end the loop and store the index of the current ent.
-# After the game loop has finished we move to the next entity
-# Bascially looping through one entity at a time but not looping through all the ent during on game update.
-#
 # INFO
 # 0 = Witch_One
 # 1 = Iron_Golem
@@ -57,6 +50,7 @@ class EnemyEntityObject():
     health = 0
     shouldDelete = False
     attackDelay = 0#Sum reason using msDelay doesn't work? Like it only allows one enemy to shoot at a time.
+    damageDelay = 0
 
     def __init__(textureID):
         self.waypoint = None
@@ -87,12 +81,15 @@ class EnemyEntityObject():
         distToPlayer = calcDistance(pos[0], pos[1], playerOne.x, playerOne.y)
 
         self.doMovement()
+
+        if self.damageDelay != 0:
+            self.damageDelay -= 1
         
         if (distToPlayer <= 50):
-            if(self.attackDelay >= 25):
+            if(self.attackDelay >= 80):
                 angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
-                velX = Math.sin(toRadians(angle)) * 95
-                velY = Math.cos(toRadians(angle)) * 95
+                velX = Math.sin(toRadians(angle)) * 90
+                velY = Math.cos(toRadians(angle)) * 90
 
                 temp = sprites.create(assets.image("""Witch_Attack"""), SpriteKind.EnemyProjectile)
                 temp.set_position(pos[0], pos[1])
@@ -141,6 +138,21 @@ class EnemyEntityObject():
             self.entSprite.setPosition(self.pos[0], self.pos[1])
 
         self.entSprite.set_velocity(self.vel[0], self.vel[1])
+
+    def dealDamage(self):
+        if self.damageDelay == 0:
+            self.health -= 1
+            self.damageDelay = 20
+
+        if self.health <= 0:
+            self.kill()
+      
+
+    def kill(self):
+        global enemyList
+        self.getSprite().set_flag(SpriteFlag.AUTO_DESTROY, False)
+        sprites.destroy( self.getSprite())
+        enemyList.remove_element(self)
 
     def doMovement(self):
         if self.entSprite == None or self.waypoint == None:
@@ -353,7 +365,7 @@ def updatePlayer():
             playerFrameIndex += 1
             if playerFrameIndex >= 4:
                 playerFrameIndex = 0
-            #print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
+            print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
         # Set frame
         playerOne.set_image(playerFrames[playerFrameIndex + playerFrameOffsetIndex])
         # END Movement
@@ -537,7 +549,11 @@ def updateEntities():
         dist = calcDistance(playerOne.x, playerOne.y, playerProj.x, playerProj.y)
         if dist >= 60:
             sprites.destroy(playerProj)
-            break
+            continue
+
+        for ent1 in enemyList:
+            if ent1.getSprite().overlaps_with(playerProj):
+                ent1.dealDamage()
 
     #Enemy Projectile loop
     if playerHurtDelay.passedMSNoReset(1000):
@@ -606,7 +622,8 @@ def getLevelEnemyData():#No point to add Cache as its called once anyway. So the
     ##Level 1 (0) will have no enemies.
     if levelID == 1:
         return [
-            EnemySpawnPointData("HallWay1", (5,12), 8, 4, [0])
+            EnemySpawnPointData("HallWay1", (5,12), 8, 4, [0]),
+            EnemySpawnPointData("HallWay2", (18,9), 8, 4, [0, 0])
         ]
     else:
         return []
@@ -655,6 +672,7 @@ def destroyAllEntities():
     for z in enemyList:
         z.getSprite().set_flag(SpriteFlag.AUTO_DESTROY, False)
         sprites.destroy( z.getSprite())
+    enemyList = []
 
 ### Level Functions END
 

@@ -157,7 +157,7 @@
     "image32": {
         "data": "hwQQABAAAAAiIiIiIiIiIvIvIiIiIiIi8i8iIiIiIiLyLyIiIiIiIvIvIiIiIiIi8i8iIiIiIiLyLyIiIiIiIvL///////8v8v///////y/yLyIiIiIiIvIvIiIiIiIi8i8iIiIiIiLyLyIiIiIiIvIvIiIiIiIi8i8iIiIiIiIiIiIiIiIiIg==",
         "mimeType": "image/x-mkcd-f4",
-        "displayName": "Waypoint_Debug"
+        "displayName": "TEST_DEBUG"
     },
     "*": {
         "mimeType": "image/x-mkcd-f4",

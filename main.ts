@@ -1,5 +1,5 @@
 //  TODO list:
-//  1. Create enemies. (Spawning, Movement and attacking is done.)
+//  1. Add movement frames to the enemies. add health bars too.
 //  2. Create Levels. -> TODO create more levels then.
 //  3. Add player stats attack, defense and more.
 //  Low Prio list:
@@ -105,13 +105,6 @@ class waypointNode {
 
 waypointNode.__initwaypointNode()
 
-// Movement maybe an A* like movement system? however we have very little processing? So may not work well.
-// Maybe a split processing approach?
-// 
-//  Check whether entity needs to move if so move it. then end the loop and store the index of the current ent.
-//  After the game loop has finished we move to the next entity
-//  Bascially looping through one entity at a time but not looping through all the ent during on game update.
-// 
 //  INFO
 //  0 = Witch_One
 //  1 = Iron_Golem
@@ -183,6 +176,17 @@ class EnemyEntityObject {
         this.___shouldDelete = value
     }
     
+    static damageDelay: number
+    private ___damageDelay_is_set: boolean
+    private ___damageDelay: number
+    get damageDelay(): number {
+        return this.___damageDelay_is_set ? this.___damageDelay : EnemyEntityObject.damageDelay
+    }
+    set damageDelay(value: number) {
+        this.___damageDelay_is_set = true
+        this.___damageDelay = value
+    }
+    
     static attackDelay: number
     private ___attackDelay_is_set: boolean
     private ___attackDelay: number
@@ -226,9 +230,10 @@ class EnemyEntityObject {
         EnemyEntityObject.health = 0
         EnemyEntityObject.shouldDelete = false
         EnemyEntityObject.attackDelay = 0
+        // Sum reason using msDelay doesn't work? Like it only allows one enemy to shoot at a time.
+        EnemyEntityObject.damageDelay = 0
     }
     
-    // Sum reason using msDelay doesn't work? Like it only allows one enemy to shoot at a time.
     constructor(textureID: number) {
         this.waypoint = null
         this.textureID = textureID
@@ -277,11 +282,15 @@ class EnemyEntityObject {
         // canSeePlayer = False
         let distToPlayer = calcDistance(pos[0], pos[1], playerOne.x, playerOne.y)
         this.doMovement()
+        if (this.damageDelay != 0) {
+            this.damageDelay -= 1
+        }
+        
         if (distToPlayer <= 50) {
-            if (this.attackDelay >= 25) {
+            if (this.attackDelay >= 80) {
                 angle = calcAngle(pos[0], pos[1], playerOne.x, playerOne.y)
-                velX = Math.sin(toRadians(angle)) * 95
-                velY = Math.cos(toRadians(angle)) * 95
+                velX = Math.sin(toRadians(angle)) * 90
+                velY = Math.cos(toRadians(angle)) * 90
                 temp = sprites.create(assets.image`Witch_Attack`, SpriteKind.EnemyProjectile)
                 temp.setPosition(pos[0], pos[1])
                 temp.setVelocity(-velX, -velY)
@@ -336,6 +345,25 @@ class EnemyEntityObject {
         }
         
         this.entSprite.setVelocity(this.vel[0], this.vel[1])
+    }
+    
+    public dealDamage() {
+        if (this.damageDelay == 0) {
+            this.health -= 1
+            this.damageDelay = 20
+        }
+        
+        if (this.health <= 0) {
+            this.kill()
+        }
+        
+    }
+    
+    public kill() {
+        
+        this.getSprite().setFlag(SpriteFlag.AutoDestroy, false)
+        sprites.destroy(this.getSprite())
+        enemyList.removeElement(this)
     }
     
     public doMovement() {
@@ -739,9 +767,9 @@ function updatePlayer() {
                 playerFrameIndex = 0
             }
             
+            console.log("X: " + playerOne.x + " Y: " + playerOne.y + " TileMap[X: " + Math.trunc(playerOne.x / 16) + " Y: " + Math.trunc(playerOne.y / 16) + "]")
         }
         
-        // print("X: "+playerOne.x+" Y: "+playerOne.y + " TileMap[X: "+ int(playerOne.x / 16)+ " Y: "+int(playerOne.y / 16)+"]")
         //  Set frame
         playerOne.setImage(playerFrames[playerFrameIndex + playerFrameOffsetIndex])
         //  END Movement
@@ -986,9 +1014,15 @@ function updateEntities() {
         dist = calcDistance(playerOne.x, playerOne.y, playerProj.x, playerProj.y)
         if (dist >= 60) {
             sprites.destroy(playerProj)
-            break
+            continue
         }
         
+        for (let ent1 of enemyList) {
+            if (ent1.getSprite().overlapsWith(playerProj)) {
+                ent1.dealDamage()
+            }
+            
+        }
     }
     // Enemy Projectile loop
     if (playerHurtDelay.passedMSNoReset(1000)) {
@@ -1058,7 +1092,7 @@ function getLevelEnemyData(): EnemySpawnPointData[] {
     
     // #Level 1 (0) will have no enemies.
     if (levelID == 1) {
-        return [new EnemySpawnPointData("HallWay1", [5, 12], 8, 4, [0])]
+        return [new EnemySpawnPointData("HallWay1", [5, 12], 8, 4, [0]), new EnemySpawnPointData("HallWay2", [18, 9], 8, 4, [0, 0])]
     } else {
         return []
     }
@@ -1118,6 +1152,7 @@ function destroyAllEntities() {
         z.getSprite().setFlag(SpriteFlag.AutoDestroy, false)
         sprites.destroy(z.getSprite())
     }
+    enemyList = []
 }
 
 // ## Level Functions END
