@@ -1069,6 +1069,8 @@ function setLevel() {
         lvl = tilemap`Lv0_Intro`
     } else if (levelID == 1) {
         lvl = tilemap`Lv1_Dun1`
+    } else if (levelID == 2) {
+        lvl = tilemap`Lv1_Dun2`
     }
     
     tiles.setCurrentTilemap(lvl)
@@ -1080,8 +1082,14 @@ function getLevelDoorData(): LvlDoorData[] {
         pos = [48, 32]
         return [new LvlDoorData([38, 24], 1, pos), new LvlDoorData([39, 24], 1, pos), new LvlDoorData([40, 24], 1, pos), new LvlDoorData([41, 24], 1, pos), new LvlDoorData([42, 24], 1, pos), new LvlDoorData([42, 23], 1, pos), new LvlDoorData([42, 22], 1, pos), new LvlDoorData([42, 21], 1, pos), new LvlDoorData([42, 20], 1, pos)]
     } else if (levelID == 1) {
-        return [new LvlDoorData([3, 0], 0, [640, 352]), new LvlDoorData([25, 3], 0, [640, 352])]
+        // Room 1
+        return [new LvlDoorData([3, 0], 0, [640, 352]), new LvlDoorData([25, 3], 2, [31, 56])]
+    } else if (levelID == 2) {
+        // Spawn
+        // Room 2
+        return [new LvlDoorData([25, 3], 0, [640, 352]), new LvlDoorData([25, 3], 0, [640, 352])]
     } else {
+        // #TODO set to chest room Level ID
         return []
     }
     
@@ -1291,17 +1299,6 @@ function spriteIntersectCheck(posX: any, posY: any, sprite: Sprite): boolean {
     
 }
 
-function gCost(startPos: any, currentPos: any): number {
-    let xDiff = startPos[0] - currentPos[0]
-    let yDiff = startPos[1] - currentPos[1]
-    return Math.sqrt(Math.abs(xDiff) + Math.abs(yDiff))
-}
-
-function fCost(startPos: any, currentPos: any, endPos: any) {
-    
-}
-
-//  TODO
 // ## Maths Funcs END
 // Level info START
 let levelSizes = [50, 26]

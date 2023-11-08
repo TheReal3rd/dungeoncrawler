@@ -593,13 +593,15 @@ def setLevel():#Set the current level to the levelID
         lvl = tilemap("""Lv0_Intro""")
     elif levelID == 1:
         lvl = tilemap("""Lv1_Dun1""")
+    elif levelID == 2:
+        lvl = tilemap("""Lv1_Dun2""")
     tiles.set_current_tilemap(lvl)
 
 def getLevelDoorData():
     if levelID == 0:
         pos = (48,32)
         return [
-                    LvlDoorData((38,24), 1, pos),
+                    LvlDoorData((38,24), 1, pos),#Room 1
                     LvlDoorData((39,24), 1, pos),
                     LvlDoorData((40,24), 1, pos),
                     LvlDoorData((41,24), 1, pos),
@@ -611,9 +613,15 @@ def getLevelDoorData():
                 ]
     elif levelID == 1:
         return [
-                    LvlDoorData((3, 0), 0, (640, 352)),
-                    LvlDoorData((25,3), 0, (640, 352))
+                    LvlDoorData((3, 0), 0, (640, 352)),#Spawn
+                    LvlDoorData((25,3), 2, (31, 56))#Room 2
                 ]
+    elif levelID == 2:
+        return [
+            LvlDoorData((25, 3), 0, (640, 352)),##TODO set to chest room Level ID
+
+            LvlDoorData((25, 3), 0, (640, 352)),
+        ]
     else:
         return []
 
@@ -791,14 +799,6 @@ def spriteIntersectCheck(posX, posY, sprite : Sprite):
         return True
     else:
         return False
-
-def gCost(startPos, currentPos):
-    xDiff = startPos[0] - currentPos[0]
-    yDiff = startPos[1] - currentPos[1]
-    return Math.sqrt(Math.abs(xDiff) + Math.abs(yDiff))
-
-def fCost(startPos, currentPos, endPos):
-    pass # TODO
 
 ### Maths Funcs END
 
