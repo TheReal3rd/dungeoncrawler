@@ -1193,7 +1193,7 @@ function spriteToScreen(textSprite: Sprite): number[] {
     //  map_size = ? (200)
     //  tile_size * map_size - (X_range or Y_range)
     //  So no real point making it dynamic as you can't. (So i made it dynamic. :D)
-    return [clamp(80, 16 * levelSizes[levelID] - 80, playerOne.x) - (scene.screenWidth() - textSprite.width) / 2, clamp(60, 16 * levelSizes[levelID] - 60, playerOne.y) - (scene.screenHeight() - textSprite.height) / 2]
+    return [clamp(80, 16 * levelSizes[levelID][0] - 80, playerOne.x) - (scene.screenWidth() - textSprite.width) / 2, clamp(60, 16 * levelSizes[levelID][1] - 60, playerOne.y) - (scene.screenHeight() - textSprite.height) / 2]
 }
 
 // Ensures the given angle is within the limits.
@@ -1301,7 +1301,7 @@ function spriteIntersectCheck(posX: any, posY: any, sprite: Sprite): boolean {
 
 // ## Maths Funcs END
 // Level info START
-let levelSizes = [50, 26]
+let levelSizes = [[50, 50], [26, 26], [26, 26], [26, 42]]
 let levelID = 0
 let spawnedAreas : String[] = []
 // Yes kinda cringe but a bool didn't work. So this stores the NameID of areas that have spawned its enemies.

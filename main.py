@@ -707,8 +707,8 @@ def spriteToScreen(textSprite: Sprite):
     # map_size = ? (200)
     # tile_size * map_size - (X_range or Y_range)
     # So no real point making it dynamic as you can't. (So i made it dynamic. :D)
-    return [clamp(80, (16 * levelSizes[levelID]) - 80 , playerOne.x) - (scene.screen_width() - textSprite.width) / 2,
-        clamp(60, (16 * levelSizes[levelID]) - 60, playerOne.y) - (scene.screen_height() - textSprite.height) / 2]
+    return [clamp(80, (16 * levelSizes[levelID][0]) - 80 , playerOne.x) - (scene.screen_width() - textSprite.width) / 2,
+        clamp(60, (16 * levelSizes[levelID][1]) - 60, playerOne.y) - (scene.screen_height() - textSprite.height) / 2]
 #Ensures the given angle is within the limits.
 def wrapDegrees(degrees):
     d = degrees % 360
@@ -805,7 +805,7 @@ def spriteIntersectCheck(posX, posY, sprite : Sprite):
 
 
 #Level info START
-levelSizes = [ 50, 26 ]
+levelSizes = [ (50, 50), (26, 26), (26, 26), (26 , 42) ]
 levelID = 0
 spawnedAreas: List[String] = []#Yes kinda cringe but a bool didn't work. So this stores the NameID of areas that have spawned its enemies.
 enemyList: List[EnemyEntityObject] = []
