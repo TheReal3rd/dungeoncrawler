@@ -599,9 +599,9 @@ def setLevel():#Set the current level to the levelID
 
 def getLevelDoorData():
     if levelID == 0:
-        pos = (48,32)
+        pos = (48,32) ## TODO change repeated segments into loops.
         return [
-                    LvlDoorData((38,24), 1, pos),#Room 1
+                    LvlDoorData((38,24), 1, pos),#Room 1 
                     LvlDoorData((39,24), 1, pos),
                     LvlDoorData((40,24), 1, pos),
                     LvlDoorData((41,24), 1, pos),
@@ -620,7 +620,15 @@ def getLevelDoorData():
         return [
             LvlDoorData((25, 3), 0, (640, 352)),##TODO set to chest room Level ID
 
-            LvlDoorData((25, 3), 0, (640, 352)),
+            LvlDoorData((12, 0), 0, (640, 352)),
+            LvlDoorData((13, 0), 0, (640, 352)),
+            LvlDoorData((14, 0), 0, (640, 352)),
+            LvlDoorData((15, 0), 0, (640, 352)),
+            LvlDoorData((16, 0), 0, (640, 352)),
+            LvlDoorData((17, 0), 0, (640, 352)),
+            LvlDoorData((18, 0), 0, (640, 352)),
+            LvlDoorData((19, 0), 0, (640, 352)),
+            LvlDoorData((20, 0), 0, (640, 352)),
         ]
     else:
         return []

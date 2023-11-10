@@ -1080,14 +1080,15 @@ function getLevelDoorData(): LvlDoorData[] {
     let pos: number[];
     if (levelID == 0) {
         pos = [48, 32]
+        // # TODO change repeated segments into loops.
         return [new LvlDoorData([38, 24], 1, pos), new LvlDoorData([39, 24], 1, pos), new LvlDoorData([40, 24], 1, pos), new LvlDoorData([41, 24], 1, pos), new LvlDoorData([42, 24], 1, pos), new LvlDoorData([42, 23], 1, pos), new LvlDoorData([42, 22], 1, pos), new LvlDoorData([42, 21], 1, pos), new LvlDoorData([42, 20], 1, pos)]
     } else if (levelID == 1) {
-        // Room 1
+        // Room 1 
         return [new LvlDoorData([3, 0], 0, [640, 352]), new LvlDoorData([25, 3], 2, [31, 56])]
     } else if (levelID == 2) {
         // Spawn
         // Room 2
-        return [new LvlDoorData([25, 3], 0, [640, 352]), new LvlDoorData([25, 3], 0, [640, 352])]
+        return [new LvlDoorData([25, 3], 0, [640, 352]), new LvlDoorData([12, 0], 0, [640, 352]), new LvlDoorData([13, 0], 0, [640, 352]), new LvlDoorData([14, 0], 0, [640, 352]), new LvlDoorData([15, 0], 0, [640, 352]), new LvlDoorData([16, 0], 0, [640, 352]), new LvlDoorData([17, 0], 0, [640, 352]), new LvlDoorData([18, 0], 0, [640, 352]), new LvlDoorData([19, 0], 0, [640, 352]), new LvlDoorData([20, 0], 0, [640, 352])]
     } else {
         // #TODO set to chest room Level ID
         return []
